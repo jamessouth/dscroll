@@ -1,11 +1,14 @@
 open Core
 
-let do_hash file = Md5.digest_file_blocking file |> Md5.to_hex |> print_endline
-
 let command =
   Command.basic ~summary:"Generate an MD5 hash of the input data"
     ~readme:(fun () -> "More detailed information")
-    Command.Param.(
-      map (anon ("filename" %: string)) ~f:(fun filename () -> do_hash filename))
+    (let%map_open.Command text = anon ("text" %: string)
+     and length =
+       flag_optional_with_default_doc "--length" int
+         (fun x -> Int.sexp_of_t x)
+         ~default:15 ~doc:"int width"
+     in
+     fun () -> do_hash hash_length filename)
 
 let () = Command_unix.run ~version:"1.0" ~build_info:"RWO" command
