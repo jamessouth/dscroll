@@ -5,10 +5,10 @@ let command =
     ~readme:(fun () -> "More detailed information")
     (let%map_open.Command text = anon ("text" %: string)
      and length =
-       flag_optional_with_default_doc "--length" int
+       flag_optional_with_default_doc "-length" int
          (fun x -> Int.sexp_of_t x)
          ~default:15 ~doc:"int width"
      in
-     fun () -> do_hash hash_length filename)
+     fun () -> Dscroll.run text length)
 
 let () = Command_unix.run ~version:"1.0" ~build_info:"RWO" command
