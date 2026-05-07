@@ -6,6 +6,14 @@ let direction =
       | "left" | "right" | "bounce" -> dir
       | _ -> failwith "invalid direction")
 
+let sleep =
+  Command.Arg_type.create (fun time ->
+      let mils = time |> int_of_string_opt in
+      match mils with
+      | Some t -> (
+          match t with t when t > 0 -> t | _ -> failwith "invalid sleep value")
+      | None -> failwith "not an int")
+
 let command =
   Command.basic ~summary:"Generate an MD5 hash of the input data"
     ~readme:(fun () -> "More detailed information")
@@ -31,7 +39,13 @@ let command =
        flag_optional_with_default_doc "--endcap" ~aliases:[ "-e" ] string
          (fun x -> String.sexp_of_t x)
          ~default:" " ~doc:"string pad between end and start of TEXT"
+     and sleep =
+       flag_optional_with_default_doc "--sleep" ~aliases:[ "-sl" ] sleep
+         (fun x -> Int.sexp_of_t x)
+         ~default:300 ~doc:"int sleep in ms per scroll of TEXT"
      in
-     fun () -> Dscroll.run text width direction prefix suffix endcap)
+     fun () -> Dscroll.run text width direction prefix suffix endcap sleep)
 
 let () = Command_unix.run ~version:"1.0" ~build_info:"RWO" command
+
+(*Time_unix.pause*)
