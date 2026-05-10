@@ -4,15 +4,20 @@ let direction =
   Command.Arg_type.create (fun dir ->
       match dir with
       | "left" | "right" | "bounce" -> dir
-      | _ -> failwith "invalid direction")
+      | _ ->
+          failwith "invalid direction - must be one of left, right, or bounce")
 
-let sleep =
-  Command.Arg_type.create (fun time ->
-      let mils = time |> int_of_string_opt in
-      match mils with
-      | Some t -> (
-          match t with t when t > 0 -> t | _ -> failwith "invalid sleep value")
-      | None -> failwith "not an int")
+let posint ~msg num =
+  let raw = num |> int_of_string_opt in
+  match raw with
+  | Some n -> (
+      match n with
+      | n when n > 0 -> n
+      | _ -> failwith ("invalid " ^ msg ^ " value - must be a positive int"))
+  | None -> failwith "not an int"
+
+let sleep = Command.Arg_type.create (posint ~msg:"sleep")
+let width = Command.Arg_type.create (posint ~msg:"width")
 
 let command =
   Command.basic ~summary:"Generate an MD5 hash of the input data"
@@ -20,7 +25,7 @@ let command =
     (let%map_open.Command text =
        anon (non_empty_sequence_as_list ("text" %: string))
      and width =
-       flag_optional_with_default_doc "--width" ~aliases:[ "-w" ] int
+       flag_optional_with_default_doc "--width" ~aliases:[ "-w" ] width
          (fun x -> Int.sexp_of_t x)
          ~default:15 ~doc:"int display width"
      and direction =
@@ -43,8 +48,12 @@ let command =
        flag_optional_with_default_doc "--sleep" ~aliases:[ "-sl" ] sleep
          (fun x -> Int.sexp_of_t x)
          ~default:300 ~doc:"int sleep in ms per scroll of TEXT"
+     and no_newline =
+       flag "--no-newline" ~aliases:[ "-nnl" ] no_arg
+         ~doc:" do not add newline to output"
      in
-     fun () -> Dscroll.run text width direction prefix suffix endcap sleep)
+     fun () ->
+       Dscroll.run text width direction prefix suffix endcap sleep no_newline)
 
 let () = Command_unix.run ~version:"1.0" ~build_info:"RWO" command
 
