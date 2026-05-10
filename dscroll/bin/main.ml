@@ -56,5 +56,3 @@ let command =
        Dscroll.run text width direction prefix suffix endcap sleep no_newline)
 
 let () = Command_unix.run ~version:"1.0" ~build_info:"RWO" command
-
-(*Time_unix.pause*)
