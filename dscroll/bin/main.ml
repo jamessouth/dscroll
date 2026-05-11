@@ -18,6 +18,7 @@ let posint ~msg num =
 
 let sleep = Command.Arg_type.create (posint ~msg:"sleep")
 let width = Command.Arg_type.create (posint ~msg:"width")
+let ecl = Command.Arg_type.create (posint ~msg:"endcap length")
 
 let command =
   Command.basic ~summary:"Generate an MD5 hash of the input data"
@@ -40,10 +41,14 @@ let command =
        flag_optional_with_default_doc "--suffix" ~aliases:[ "-s" ] string
          (fun x -> String.sexp_of_t x)
          ~default:"" ~doc:"string suffix at right of display"
-     and endcap =
-       flag_optional_with_default_doc "--endcap" ~aliases:[ "-e" ] string
-         (fun x -> String.sexp_of_t x)
-         ~default:" " ~doc:"string pad between end and start of TEXT"
+     and endcap_char =
+       flag_optional_with_default_doc "--endcap-char" ~aliases:[ "-ec" ] char
+         (fun x -> Char.sexp_of_t x)
+         ~default:' ' ~doc:"char pad between end and start of TEXT"
+     and endcap_len =
+       flag_optional_with_default_doc "--endcap-len" ~aliases:[ "-ecl" ] ecl
+         (fun x -> Int.sexp_of_t x)
+         ~default:1 ~doc:"int min length of endcap"
      and sleep =
        flag_optional_with_default_doc "--sleep" ~aliases:[ "-sl" ] sleep
          (fun x -> Int.sexp_of_t x)
@@ -53,6 +58,7 @@ let command =
          ~doc:" do not add newline to output"
      in
      fun () ->
-       Dscroll.run text width direction prefix suffix endcap sleep no_newline)
+       Dscroll.run text width direction prefix suffix endcap_char endcap_len
+         sleep no_newline)
 
 let () = Command_unix.run ~version:"1.0" ~build_info:"RWO" command
