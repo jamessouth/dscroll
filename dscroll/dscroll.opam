@@ -10,8 +10,9 @@ homepage: "https://github.com/jamessouth/dscroll"
 doc: "https://github.com/jamessouth/dscroll/blob/master/README.md"
 bug-reports: "https://github.com/jamessouth/dscroll/issues"
 depends: [
-  "dune" {>= "3.22"}
   "ocaml"
+  "dune" {>= "3.22"}
+  "core"
   "odoc" {with-doc}
 ]
 build: [

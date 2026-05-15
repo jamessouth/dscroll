@@ -19,7 +19,7 @@
  (name dscroll)
  (synopsis "text scroller")
  (description "a text scroller for polybar, etc., inspired by zscroll")
- (depends ocaml)
+ (depends ocaml dune core)
  (tags ("scroll text")))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/reference/dune-project/index.html
