@@ -1,11 +1,16 @@
 open Core
 
+let nonnegint ~min num =
+  match num |> int_of_string_opt with
+  | Some n -> Int.max min n
+  | None -> invalid_arg "not an int"
+
 type cliflags = {
   cycles : int;
   direction : string;
   endcap_char : char;
   endcap_len : int;
-  no_newline : Base.bool;
+  no_newline : Bool.t;
   prefix : string;
   speed : int;
   suffix : string;

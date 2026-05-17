@@ -8,17 +8,13 @@ let direction =
       match dir with
       | "left" | "right" | "bounce" -> dir
       | _ ->
-          failwith "invalid direction - must be one of left, right, or bounce")
+          invalid_arg
+            "invalid direction - must be one of left, right, or bounce")
 
-let nonnegint ~min num =
-  match num |> int_of_string_opt with
-  | Some n -> Int.max min n
-  | None -> failwith "not an int"
-
-let cyc = Command.Arg_type.create (nonnegint ~min:0)
-let ecl = Command.Arg_type.create (nonnegint ~min:1)
-let spd = Command.Arg_type.create (nonnegint ~min:1)
-let wid = Command.Arg_type.create (nonnegint ~min:1)
+let cyc = Command.Arg_type.create (Dscroll.nonnegint ~min:0)
+let ecl = Command.Arg_type.create (Dscroll.nonnegint ~min:1)
+let spd = Command.Arg_type.create (Dscroll.nonnegint ~min:1)
+let wid = Command.Arg_type.create (Dscroll.nonnegint ~min:1)
 
 let flags : Dscroll.cliflags Command.Param.t =
   let%map_open.Command cycles =

@@ -1,3 +1,19 @@
 (test
  (name test_dscroll)
  (libraries dscroll))
+
+; 1. Define the test code as its own library
+
+(library
+ (name test_dscroll_lib)
+ (inline_tests)
+ (libraries dscroll core)
+ (preprocess
+  (pps ppx_inline_test ppx_assert)))
+
+; 2. Define the executable that actually triggers the tests
+
+(test
+ (name run)
+ (modules run)
+ (libraries test_dscroll_lib))
