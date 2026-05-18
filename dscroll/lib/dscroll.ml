@@ -1,9 +1,11 @@
 open Core
 
 let nonnegint ~min num =
-  match num |> int_of_string_opt with
-  | Some n -> Int.max min n
-  | None -> invalid_arg "not an int"
+  if min |> Int.is_negative then invalid_arg "min must be >= 0"
+  else
+    match num |> int_of_string_opt with
+    | Some n -> Int.max min n
+    | None -> invalid_arg "not an int"
 
 type cliflags = {
   cycles : int;
