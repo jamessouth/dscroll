@@ -1,5 +1,14 @@
 open Core
 
+type scrl_dir = Left | Right | Bounce
+
+let scrldir dir =
+  match String.lowercase dir with
+  | "left" -> Left
+  | "right" -> Right
+  | "bounce" -> Bounce
+  | _ -> invalid_arg "invalid direction - must be one of left, right, or bounce"
+
 let nonnegint ~min num =
   if min |> Int.is_negative then invalid_arg "min must be >= 0"
   else

@@ -1,22 +1,15 @@
 open Core
+open Dscroll
 
 (* The only zeroless pandigital number where the first n digits are divisible by n, used as 'infinity' *)
 let quasi_inf = 381_654_729
+let direction = Command.Arg_type.create scrldir
+let cyc = Command.Arg_type.create (nonnegint ~min:0)
+let ecl = Command.Arg_type.create (nonnegint ~min:1)
+let spd = Command.Arg_type.create (nonnegint ~min:1)
+let wid = Command.Arg_type.create (nonnegint ~min:1)
 
-let direction =
-  Command.Arg_type.create (fun dir ->
-      match dir with
-      | "left" | "right" | "bounce" -> dir
-      | _ ->
-          invalid_arg
-            "invalid direction - must be one of left, right, or bounce")
-
-let cyc = Command.Arg_type.create (Dscroll.nonnegint ~min:0)
-let ecl = Command.Arg_type.create (Dscroll.nonnegint ~min:1)
-let spd = Command.Arg_type.create (Dscroll.nonnegint ~min:1)
-let wid = Command.Arg_type.create (Dscroll.nonnegint ~min:1)
-
-let flags : Dscroll.cliflags Command.Param.t =
+let flags : cliflags Command.Param.t =
   let%map_open.Command cycles =
     flag_optional_with_default_doc "--cycles" ~aliases:[ "-c" ] cyc
       (fun x -> Int.sexp_of_t x)
@@ -54,7 +47,7 @@ let flags : Dscroll.cliflags Command.Param.t =
       ~default:15 ~doc:"int display width"
   in
   {
-    Dscroll.cycles;
+    cycles;
     direction;
     endcap_char;
     endcap_len;
@@ -72,4 +65,4 @@ let () =
        (let%map_open.Command text =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
-        fun () -> Dscroll.run text flags))
+        fun () -> run text flags))
