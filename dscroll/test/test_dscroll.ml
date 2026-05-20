@@ -1,6 +1,5 @@
 QCheck_base_runner.run_tests_main
-  [
-    (* QCheck2.(
+  [ (* QCheck2.(
       Test.make ~count:1000 ~name:"nonnegint1"
         ~print:Print.(pair int int)
         ~collect:(fun (min, n) ->
@@ -49,11 +48,10 @@ QCheck_base_runner.run_tests_main
           with
           | Invalid_argument _ -> true
           | _ -> false)); *)
-    QCheck2.(
+    (* QCheck2.(
       Test.make ~count:1000 ~name:"scrldir2"
         (* ~print:Print.(pair string Dscroll.scrl_dir) *)
         Gen.(
           oneof_list
             [ ("left", Dscroll.Left); ("right", Right); ("bounce", Bounce) ])
-        (fun (dir, var) -> Dscroll.scrldir dir = var));
-  ]
+        (fun (dir, var) -> Dscroll.scrldir dir = var)); *) ]

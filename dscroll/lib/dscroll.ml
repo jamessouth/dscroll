@@ -1,13 +1,5 @@
 open Core
-
-type scrl_dir = Left | Right | Bounce
-
-let scrldir dir =
-  match String.lowercase dir with
-  | "left" -> Left
-  | "right" -> Right
-  | "bounce" -> Bounce
-  | _ -> invalid_arg "invalid direction - must be one of left, right, or bounce"
+module Direction = Direction
 
 let nonnegint ~min num =
   if min |> Int.is_negative then invalid_arg "min must be >= 0"
@@ -18,7 +10,7 @@ let nonnegint ~min num =
 
 type cliflags = {
   cycles : int;
-  direction : string;
+  direction : Direction.t;
   endcap_char : char;
   endcap_len : int;
   no_newline : Bool.t;
@@ -28,7 +20,7 @@ type cliflags = {
   width : int;
 }
 
-let rec loop text delay width cnt =
+(* let rec loop text delay width cnt =
   match cnt = 0 with
   | true -> exit 0
   | false ->
@@ -57,14 +49,15 @@ let run text flags =
     |> String.concat |> Time_float_unix.Span.of_string
   in
 
-  loop (words ^ endcap) delay flags.width 500
+  loop (words ^ endcap) delay flags.width 500 *)
 
-(* let run text width direction prefix suffix endcap_char endcap_len sleep no_newline =
-    List.iter text ~f:(fun word -> printf "%s " word);
-    width |> string_of_int |> print_endline;
-    direction |> print_endline;
-    prefix |> print_endline;
-    suffix |> print_endline;
-    "vvv" ^ String.make endcap_len endcap_char ^ "bbbb" |> print_endline;
-    sleep |> string_of_int |> print_endline;
-    no_newline |> printf "%B\n" *)
+let run text flags =
+  List.iter text ~f:(fun word -> printf "%s " word);
+  flags.width |> string_of_int |> print_endline;
+  flags.direction |> Direction.sexp_of_t |> print_s;
+  flags.prefix |> print_endline;
+  flags.suffix |> print_endline;
+  "vvv" ^ String.make flags.endcap_len flags.endcap_char ^ "bbbb"
+  |> print_endline;
+  flags.speed |> string_of_int |> print_endline;
+  flags.no_newline |> printf "%B\n"

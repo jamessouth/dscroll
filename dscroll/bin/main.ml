@@ -3,7 +3,6 @@ open Dscroll
 
 (* The only zeroless pandigital number where the first n digits are divisible by n, used as 'infinity' *)
 let quasi_inf = 381_654_729
-let direction = Command.Arg_type.create scrldir
 let cyc = Command.Arg_type.create (nonnegint ~min:0)
 let ecl = Command.Arg_type.create (nonnegint ~min:1)
 let spd = Command.Arg_type.create (nonnegint ~min:1)
@@ -15,9 +14,8 @@ let flags : cliflags Command.Param.t =
       (fun x -> Int.sexp_of_t x)
       ~default:quasi_inf ~doc:"int number of scroll cycles"
   and direction =
-    flag_optional_with_default_doc "--direction" ~aliases:[ "-d" ] direction
-      (fun x -> String.sexp_of_t x)
-      ~default:"left" ~doc:"string left, right, or bounce"
+    flag_optional_with_default_doc "--direction" ~aliases:[ "-d" ] Direction.arg
+      Direction.sexp_of_t ~default:Left ~doc:"string"
   and endcap_char =
     flag_optional_with_default_doc "--endcap-char" ~aliases:[ "-ecc" ] char
       (fun x -> Char.sexp_of_t x)

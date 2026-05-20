@@ -1,0 +1,14 @@
+EXE_PATH="./_build/default/bin/main.exe"
+FILE="bashcomp"
+complete -r "$EXE_PATH" 2>/dev/null || true
+if ! env COMMAND_OUTPUT_INSTALLATION_BASH=1 "$EXE_PATH" bbb > "$FILE"; then
+    echo "Error: Failed to generate completion file!" >&2
+    return 1
+fi
+. "./$FILE"
+if ! complete -p "$EXE_PATH" &>/dev/null; then
+    echo "Error: Bash completion not installed for $EXE_PATH!" >&2
+    return 1
+fi
+echo "Success!"
+
