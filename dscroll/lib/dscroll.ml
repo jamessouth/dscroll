@@ -1,12 +1,6 @@
 open Core
 module Direction = Direction
-
-let nonnegint ~min num =
-  if min |> Int.is_negative then invalid_arg "min must be >= 0"
-  else
-    match num |> int_of_string_opt with
-    | Some n -> Int.max min n
-    | None -> invalid_arg "not an int"
+module Ints = Ints
 
 type cliflags = {
   cycles : int;

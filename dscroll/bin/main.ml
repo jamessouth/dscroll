@@ -1,27 +1,22 @@
 open Core
 open Dscroll
 
-(* The only zeroless pandigital number where the first n digits are divisible by n, used as 'infinity' *)
-let quasi_inf = 381_654_729
-let cyc = Command.Arg_type.create (nonnegint ~min:0)
-let ecl = Command.Arg_type.create (nonnegint ~min:1)
-let spd = Command.Arg_type.create (nonnegint ~min:1)
-let wid = Command.Arg_type.create (nonnegint ~min:1)
-
 let flags : cliflags Command.Param.t =
   let%map_open.Command cycles =
-    flag_optional_with_default_doc "--cycles" ~aliases:[ "-c" ] cyc
+    flag_optional_with_default_doc "--cycles" ~aliases:[ "-c" ] Ints.nonneg
       (fun x -> Int.sexp_of_t x)
-      ~default:quasi_inf ~doc:"int number of scroll cycles"
+      ~default:Ints.quasi_inf ~doc:"int number of scroll cycles"
   and direction =
     flag_optional_with_default_doc "--direction" ~aliases:[ "-d" ] Direction.arg
-      Direction.sexp_of_t ~default:Left ~doc:"string"
+      Direction.sexp_of_t ~default:Left
+      ~doc:"string scroll left, right, or bounce"
   and endcap_char =
     flag_optional_with_default_doc "--endcap-char" ~aliases:[ "-ecc" ] char
       (fun x -> Char.sexp_of_t x)
       ~default:' ' ~doc:"char pad between end and start of TEXT"
   and endcap_len =
-    flag_optional_with_default_doc "--endcap-len" ~aliases:[ "-ecl" ] ecl
+    flag_optional_with_default_doc "--endcap-len" ~aliases:[ "-ecl" ]
+      Ints.posint
       (fun x -> Int.sexp_of_t x)
       ~default:1 ~doc:"int minimum length of endcap"
   and no_newline =
@@ -32,7 +27,7 @@ let flags : cliflags Command.Param.t =
       (fun x -> String.sexp_of_t x)
       ~default:"" ~doc:"string prefix at left of display"
   and speed =
-    flag_optional_with_default_doc "--speed" ~aliases:[ "-sp" ] spd
+    flag_optional_with_default_doc "--speed" ~aliases:[ "-sp" ] Ints.posint
       (fun x -> Int.sexp_of_t x)
       ~default:300 ~doc:"int sleep in ms per scroll of TEXT"
   and suffix =
@@ -40,7 +35,7 @@ let flags : cliflags Command.Param.t =
       (fun x -> String.sexp_of_t x)
       ~default:"" ~doc:"string suffix at right of display"
   and width =
-    flag_optional_with_default_doc "--width" ~aliases:[ "-w" ] wid
+    flag_optional_with_default_doc "--width" ~aliases:[ "-w" ] Ints.posint
       (fun x -> Int.sexp_of_t x)
       ~default:15 ~doc:"int display width"
   in
