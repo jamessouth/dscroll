@@ -7,6 +7,7 @@ type cliflags = {
   direction : Direction.t;
   endcap_char : char;
   endcap_len : int;
+  initial_pause : int;
   no_newline : Bool.t;
   prefix : string;
   speed : int;

@@ -12,46 +12,28 @@ QCheck_base_runner.run_tests_main
         Gen.(pair (Gen.int_bound 2) (Gen.int_bound 2000))
         (fun (min, n) ->
           let numstr = string_of_int n in
-          let res = Dscroll.nonnegint ~min numstr in
-          res >= min && res >= n && res >= 0)); *)
-    (* QCheck2.(
+          let res = Dscroll.Ints.getint ~min numstr in
+          res >= min && res >= n && res >= 0));
+    QCheck2.(
       Test.make ~count:1000 ~name:"nonnegint2"
         ~print:Print.(string)
         Gen.(string_small_of printable)
         (fun s ->
           assume (int_of_string_opt s = None);
           try
-            let _ = Dscroll.nonnegint ~min:0 s in
+            let _ = Dscroll.Ints.getint ~min:0 s in
             false
           with
           | Invalid_argument _ -> true
-          | _ -> false)); *)
-    (* QCheck2.(
-            Test.make ~count:1000 ~name:"nonnegint3"
-            ~print:Print.(pair int string)
-            Gen.(pair int_neg string)
-            (fun (min, n) ->
-                try
-                    let _ = Dscroll.nonnegint ~min n in
-                    false
-                with
-                | Invalid_argument _ -> true
-                | _ -> false)); *)
-    (* QCheck2.(
-      Test.make ~count:1000 ~name:"scrldir1"
-        ~print:Print.(string)
-        Gen.(string_small_of printable)
-        (fun s ->
+          | _ -> false));
+    QCheck2.(
+      Test.make ~count:1000 ~name:"nonnegint3"
+        ~print:Print.(pair int string)
+        Gen.(pair int_neg string)
+        (fun (min, n) ->
           try
-            let _ = Dscroll.scrldir s in
+            let _ = Dscroll.Ints.getint ~min n in
             false
           with
           | Invalid_argument _ -> true
-          | _ -> false)); *)
-    (* QCheck2.(
-      Test.make ~count:1000 ~name:"scrldir2"
-        (* ~print:Print.(pair string Dscroll.scrl_dir) *)
-        Gen.(
-          oneof_list
-            [ ("left", Dscroll.Left); ("right", Right); ("bounce", Bounce) ])
-        (fun (dir, var) -> Dscroll.scrldir dir = var)); *) ]
+          | _ -> false)); *) ]

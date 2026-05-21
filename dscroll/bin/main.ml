@@ -19,6 +19,11 @@ let flags : cliflags Command.Param.t =
       Ints.posint
       (fun x -> Int.sexp_of_t x)
       ~default:1 ~doc:"int minimum length of endcap"
+  and initial_pause =
+    flag_optional_with_default_doc "--initial-pause" ~aliases:[ "-i" ]
+      Ints.nonneg
+      (fun x -> Int.sexp_of_t x)
+      ~default:0 ~doc:"int wait in ms before scrolling begins"
   and no_newline =
     flag "--no-newline" ~aliases:[ "-nnl" ] no_arg
       ~doc:" do not add newline to output"
@@ -44,6 +49,7 @@ let flags : cliflags Command.Param.t =
     direction;
     endcap_char;
     endcap_len;
+    initial_pause;
     no_newline;
     prefix;
     speed;
