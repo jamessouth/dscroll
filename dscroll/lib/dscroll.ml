@@ -28,25 +28,47 @@ type cliflags = {
         (concat [ slice text 1 (length text); slice wrds 0 1 ])
         delay width (cnt - 1)
 
-let run text flags =
+let run text
+    {
+      cycles;
+      direction;
+      endcap_char;
+      endcap_len;
+      initial_pause;
+      no_newline;
+      prefix;
+      speed;
+      suffix;
+      width;
+    } =
+
+  in
+  print_endline (words ^ endcap);
+  let delay =
+    [ speed |> string_of_int; "ms" ]
+    |> String.concat |> Time_float_unix.Span.of_string
+  in
+  loop (words ^ endcap) delay width 500 *)
+
+let getfinaltext text endcap_char endcap_len width =
   let words = text |> String.concat ~sep:" " in
   let endcap =
     String.make
-      (Int.max
-         (flags.width - String.length words)
-         (Int.min (flags.width - 1) flags.endcap_len))
-      flags.endcap_char
+      (* prevents same char being shown twice *)
+      (* kokoko jojojo -ecc W *)
+      (* prevents showing only endcap_char (blank display)*)
+      (* kokoko jojojo gogogo -ecl 18 -ecc W *)
+      (* separates end and beginning of text *)
+      (* kokoko jojojo gogogo -ecc W *)
+      (Int.max (width - String.length words) (Int.min (width - 1) endcap_len))
+      endcap_char
   in
-  print_endline (words ^ endcap);
+  words ^ endcap
 
-  let delay =
-    [ flags.speed |> string_of_int; "ms" ]
-    |> String.concat |> Time_float_unix.Span.of_string
-  in
+let run text { endcap_char; endcap_len; width; _ } =
+  print_endline (getfinaltext text endcap_char endcap_len width)
 
-  loop (words ^ endcap) delay flags.width 500 *)
-
-let run text flags =
+(* let run text flags =
   List.iter text ~f:(fun word -> printf "%s " word);
   flags.width |> string_of_int |> print_endline;
   flags.direction |> Direction.sexp_of_t |> print_s;
@@ -55,4 +77,4 @@ let run text flags =
   "vvv" ^ String.make flags.endcap_len flags.endcap_char ^ "bbbb"
   |> print_endline;
   flags.speed |> string_of_int |> print_endline;
-  flags.no_newline |> printf "%B\n"
+  flags.no_newline |> printf "%B\n" *)
