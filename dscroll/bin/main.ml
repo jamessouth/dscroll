@@ -16,7 +16,7 @@ let flags : cliflags Command.Param.t =
       ~default:' ' ~doc:"char pad between end and start of TEXT"
   and endcap_len =
     flag_optional_with_default_doc "--endcap-len" ~aliases:[ "-ecl" ]
-      Ints.posint
+      Ints.oneplus
       (fun x -> Int.sexp_of_t x)
       ~default:1 ~doc:"int minimum length of endcap"
   and initial_pause =
@@ -32,7 +32,7 @@ let flags : cliflags Command.Param.t =
       (fun x -> String.sexp_of_t x)
       ~default:"" ~doc:"string prefix at left of display"
   and speed =
-    flag_optional_with_default_doc "--speed" ~aliases:[ "-sp" ] Ints.posint
+    flag_optional_with_default_doc "--speed" ~aliases:[ "-sp" ] Ints.oneplus
       (fun x -> Int.sexp_of_t x)
       ~default:300 ~doc:"int sleep in ms per scroll of TEXT"
   and suffix =
@@ -40,7 +40,7 @@ let flags : cliflags Command.Param.t =
       (fun x -> String.sexp_of_t x)
       ~default:"" ~doc:"string suffix at right of display"
   and width =
-    flag_optional_with_default_doc "--width" ~aliases:[ "-w" ] Ints.posint
+    flag_optional_with_default_doc "--width" ~aliases:[ "-w" ] Ints.twoplus
       (fun x -> Int.sexp_of_t x)
       ~default:15 ~doc:"int display width"
   in

@@ -51,22 +51,38 @@ let run text
   loop (words ^ endcap) delay width 500 *)
 
 let getfinaltext text endcap_char endcap_len width =
-  let words = text |> String.concat ~sep:" " in
+  (* let _ =
+    print_endline text;
+    print_endline "-------------"
+  in *)
+  (* text *)
+
+  (* prevents same char being shown twice *)
+  (* kokoko jojojo -ecc W *)
+  (* prevents showing only endcap_char (blank display)*)
+  (* kokoko jojojo gogogo -ecl 18 -ecc W *)
+  (* separates end and beginning of text *)
+  (* kokoko jojojo gogogo -ecc W *)
   let endcap =
     String.make
-      (* prevents same char being shown twice *)
-      (* kokoko jojojo -ecc W *)
-      (* prevents showing only endcap_char (blank display)*)
-      (* kokoko jojojo gogogo -ecl 18 -ecc W *)
-      (* separates end and beginning of text *)
-      (* kokoko jojojo gogogo -ecc W *)
-      (Int.max (width - String.length words) (Int.min (width - 1) endcap_len))
+      (* (Int.max (width - String.length text) (Int.min (width - 1) endcap_len)) *)
+      (Int.clamp_exn
+         (Int.max endcap_len (width - String.length text))
+         ~min:1 ~max:(width - 1))
       endcap_char
+    (* in
+  let _ =
+    print_endline (text ^ endcap);
+    print_endline
+      (" -----  " ^ text ^ "  ----  " ^ endcap ^ "  --ecl--  "
+      ^ (endcap_len |> string_of_int)
+      ^ "  --wid--  " ^ (width |> string_of_int) ^ "  ----  ") *)
   in
-  words ^ endcap
+  text ^ endcap
 
 let run text { endcap_char; endcap_len; width; _ } =
-  print_endline (getfinaltext text endcap_char endcap_len width)
+  print_endline
+    (getfinaltext (text |> String.concat ~sep:" ") endcap_char endcap_len width)
 
 (* let run text flags =
   List.iter text ~f:(fun word -> printf "%s " word);

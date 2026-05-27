@@ -11,4 +11,5 @@ let getint ~min num =
     | None -> invalid_arg "not an int"
 
 let nonneg = Command.Arg_type.create (getint ~min:0)
-let posint = Command.Arg_type.create (getint ~min:1)
+let oneplus = Command.Arg_type.create (getint ~min:1)
+let twoplus = Command.Arg_type.create (getint ~min:2)
