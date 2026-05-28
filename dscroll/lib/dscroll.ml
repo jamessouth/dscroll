@@ -15,18 +15,33 @@ type cliflags = {
   width : int;
 }
 
-(* let rec loop text delay width cnt =
-  match cnt = 0 with
+let getfinaltext text endcap_char endcap_len width =
+  text
+  ^ String.make
+      (Int.clamp_exn
+         (Int.max endcap_len (width - String.length text))
+         ~min:1 ~max:(width - 1))
+      endcap_char
+
+let rec loop text ticks direction delay width frame =
+  match ticks = 0 with
   | true -> exit 0
   | false ->
       let open String in
       let wrds = slice text 0 width in
-      print_string (string_of_int (length text) ^ " ");
+      print_string
+        (string_of_int (length text)
+        ^ " " ^ string_of_int ticks ^ " "
+        ^ string_of_int (frame % length text)
+        ^ " "
+        ^ sub text
+            ~pos:(frame % length text)
+            ~len:(length text - (frame % length text))
+        ^ ": ");
       print_endline wrds;
       Time_float_unix.pause delay;
-      (loop [@tailcall])
-        (concat [ slice text 1 (length text); slice wrds 0 1 ])
-        delay width (cnt - 1)
+      let nextwrds = concat [ slice text 1 (length text); slice wrds 0 1 ] in
+      (loop [@tailcall]) nextwrds (ticks - 1) direction delay width (frame + 1)
 
 let run text
     {
@@ -41,48 +56,21 @@ let run text
       suffix;
       width;
     } =
-
+  let finaltext =
+    getfinaltext (text |> String.concat ~sep:" ") endcap_char endcap_len width
   in
-  print_endline (words ^ endcap);
+  print_endline finaltext;
   let delay =
     [ speed |> string_of_int; "ms" ]
     |> String.concat |> Time_float_unix.Span.of_string
   in
-  loop (words ^ endcap) delay width 500 *)
+  loop finaltext
+    ((String.length finaltext * cycles) + 1)
+    direction delay width 0
 
-let getfinaltext text endcap_char endcap_len width =
-  (* let _ =
-    print_endline text;
-    print_endline "-------------"
-  in *)
-  (* text *)
-
-  (* prevents same char being shown twice *)
-  (* kokoko jojojo -ecc W *)
-  (* prevents showing only endcap_char (blank display)*)
-  (* kokoko jojojo gogogo -ecl 18 -ecc W *)
-  (* separates end and beginning of text *)
-  (* kokoko jojojo gogogo -ecc W *)
-  let endcap =
-    String.make
-      (* (Int.max (width - String.length text) (Int.min (width - 1) endcap_len)) *)
-      (Int.clamp_exn
-         (Int.max endcap_len (width - String.length text))
-         ~min:1 ~max:(width - 1))
-      endcap_char
-    (* in
-  let _ =
-    print_endline (text ^ endcap);
-    print_endline
-      (" -----  " ^ text ^ "  ----  " ^ endcap ^ "  --ecl--  "
-      ^ (endcap_len |> string_of_int)
-      ^ "  --wid--  " ^ (width |> string_of_int) ^ "  ----  ") *)
-  in
-  text ^ endcap
-
-let run text { endcap_char; endcap_len; width; _ } =
+(* let run text { endcap_char; endcap_len; width; _ } =
   print_endline
-    (getfinaltext (text |> String.concat ~sep:" ") endcap_char endcap_len width)
+    (getfinaltext (text |> String.concat ~sep:" ") endcap_char endcap_len width) *)
 
 (* let run text flags =
   List.iter text ~f:(fun word -> printf "%s " word);

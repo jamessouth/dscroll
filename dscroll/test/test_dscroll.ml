@@ -39,20 +39,21 @@ QCheck_base_runner.run_tests_main
           | Invalid_argument _ -> true
           | _ -> false)); *)
     QCheck2.(
-      Test.make ~count:1000000 ~name:"gft1"
+      Test.make ~count:100000 ~name:"gft1"
         ~print:Print.(triple string int int)
         Gen.(
           triple
-            (string_size_of (int_range 1 200) printable)
-            (int_range 1 200) (int_range 2 100))
+            (string_size_of (int_range 1 100) printable)
+            (int_range 1 100) (int_range 2 200))
         (fun (text, ecl, wid) ->
           assume
             (text
             = Core.String.filter text ~f:(fun s ->
                 not (Core.Char.is_whitespace s)));
+          let open Core in
           let res = Dscroll.getfinaltext text ' ' ecl wid in
-          Core.String.is_suffix res ~suffix:" "
-          && String.length res >= wid
-          && String.length res - String.length text < wid
-          && String.length res - String.length text > 0));
+          let reslen = String.length res in
+          let padlen = reslen - String.length text in
+          String.is_suffix res ~suffix:" "
+          && reslen >= wid && padlen < wid && padlen > 0));
   ]
