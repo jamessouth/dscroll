@@ -20,28 +20,22 @@ let getfinaltext text endcap_char endcap_len width =
   ^ String.make
       (Int.clamp_exn
          (Int.max endcap_len (width - String.length text))
-         ~min:1 ~max:(width - 1))
+         ~min:1 ~max:(pred width))
       endcap_char
 
-let rec loop text ticks direction delay width frame =
+let getnextoutput text lentext frame width =
+  let pos = frame % lentext in
+  let len = Int.min width (lentext - pos) in
+  String.sub text ~pos ~len ^ String.sub text ~pos:0 ~len:(width - len)
+
+let rec loop text lentext ticks direction delay width frame =
   match ticks = 0 with
   | true -> exit 0
   | false ->
-      let open String in
-      (* let wrds = slice text 0 width in *)
-      let lentext = length text in
-      let pos = frame % lentext in
-      let rhlen = Int.min width (lentext - pos) in
-      let lhlen = width - rhlen in
-      print_endline
-        (string_of_int lentext ^ " " ^ string_of_int ticks ^ " "
-       ^ string_of_int pos ^ " " ^ string_of_int rhlen ^ " "
-       ^ string_of_int lhlen ^ " " ^ sub text ~pos ~len:rhlen
-       ^ sub text ~pos:0 ~len:lhlen ^ ": ");
-      (* print_endline wrds; *)
+      print_endline (getnextoutput text lentext frame width);
       Time_float_unix.pause delay;
-      (* let nextwrds = concat [ slice text 1 lentext; slice wrds 0 1 ] in *)
-      (loop [@tailcall]) text (ticks - 1) direction delay width (frame + 1)
+      (loop [@tailcall]) text lentext (pred ticks) direction delay width
+        (succ frame)
 
 let run text
     {
@@ -64,8 +58,9 @@ let run text
     [ speed |> string_of_int; "ms" ]
     |> String.concat |> Time_float_unix.Span.of_string
   in
-  loop finaltext
-    ((String.length finaltext * cycles) + 1)
+  let lentext = String.length finaltext in
+  loop finaltext lentext
+    (succ (String.length finaltext * cycles))
     direction delay width 0
 
 (* let run text { endcap_char; endcap_len; width; _ } =
