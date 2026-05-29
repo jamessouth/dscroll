@@ -28,20 +28,20 @@ let rec loop text ticks direction delay width frame =
   | true -> exit 0
   | false ->
       let open String in
-      let wrds = slice text 0 width in
-      print_string
-        (string_of_int (length text)
-        ^ " " ^ string_of_int ticks ^ " "
-        ^ string_of_int (frame % length text)
-        ^ " "
-        ^ sub text
-            ~pos:(frame % length text)
-            ~len:(length text - (frame % length text))
-        ^ ": ");
-      print_endline wrds;
+      (* let wrds = slice text 0 width in *)
+      let lentext = length text in
+      let pos = frame % lentext in
+      let rhlen = Int.min width (lentext - pos) in
+      let lhlen = width - rhlen in
+      print_endline
+        (string_of_int lentext ^ " " ^ string_of_int ticks ^ " "
+       ^ string_of_int pos ^ " " ^ string_of_int rhlen ^ " "
+       ^ string_of_int lhlen ^ " " ^ sub text ~pos ~len:rhlen
+       ^ sub text ~pos:0 ~len:lhlen ^ ": ");
+      (* print_endline wrds; *)
       Time_float_unix.pause delay;
-      let nextwrds = concat [ slice text 1 (length text); slice wrds 0 1 ] in
-      (loop [@tailcall]) nextwrds (ticks - 1) direction delay width (frame + 1)
+      (* let nextwrds = concat [ slice text 1 lentext; slice wrds 0 1 ] in *)
+      (loop [@tailcall]) text (ticks - 1) direction delay width (frame + 1)
 
 let run text
     {
