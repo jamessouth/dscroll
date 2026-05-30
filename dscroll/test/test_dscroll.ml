@@ -1,5 +1,23 @@
 QCheck_base_runner.run_tests_main
   [
+    QCheck2.(
+      Test.make ~count:10 ~name:"gno"
+        ~print:Print.(quad string int int int)
+        Gen.(
+          quad
+            (string_size_of (int_range 1 100) printable)
+            (int_range 1 100) (int_range 2 100) (int_range 1 500))
+        (fun (text, ecl, wid, frm) ->
+          assume
+            (text
+            = Core.String.filter text ~f:(fun s ->
+                not (Core.Char.is_whitespace s)));
+          let open Core in
+          let ft = Dscroll.getfinaltext text ' ' ecl wid in
+          let ftlen = String.length ft in
+          let res = Dscroll.getnextoutput ft ftlen frm wid in
+          String.length res = wid
+          && String.equal (Dscroll.tloop ft ftlen (frm % ftlen) wid) res));
     (* QCheck2.(
       Test.make ~count:1000 ~name:"nonnegint1"
         ~print:Print.(pair int int)
@@ -56,21 +74,4 @@ QCheck_base_runner.run_tests_main
           let padlen = reslen - String.length text in
           String.is_suffix res ~suffix:" "
           && reslen >= wid && padlen < wid && padlen > 0)); *)
-    QCheck2.(
-      Test.make ~count:10 ~name:"gno"
-        ~print:Print.(quad string int int int)
-        Gen.(
-          quad
-            (string_size_of (int_range 1 100) printable)
-            (int_range 1 100) (int_range 2 100) (int_range 1 500))
-        (fun (text, ecl, wid, frm) ->
-          assume
-            (text
-            = Core.String.filter text ~f:(fun s ->
-                not (Core.Char.is_whitespace s)));
-          let open Core in
-          let ft = Dscroll.getfinaltext text ' ' ecl wid in
-          let ftlen = String.length ft in
-          let res = Dscroll.getnextoutput ft ftlen frm wid in
-          String.length res = wid));
   ]

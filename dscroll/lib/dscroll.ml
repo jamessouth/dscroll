@@ -15,6 +15,17 @@ type cliflags = {
   width : int;
 }
 
+let rec tloop text lentext ticks width =
+  match ticks = 0 with
+  | true -> text
+  | false ->
+      let wrds = Core.String.slice text 0 width in
+      let nextwrds =
+        Core.String.concat
+          [ Core.String.slice text 1 lentext; Core.String.slice wrds 0 1 ]
+      in
+      tloop nextwrds lentext (pred ticks) width
+
 let getfinaltext text endcap_char endcap_len width =
   text
   ^ String.make
