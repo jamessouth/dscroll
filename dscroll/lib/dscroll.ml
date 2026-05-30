@@ -16,10 +16,10 @@ type cliflags = {
 }
 
 let rec tloop text lentext ticks width =
+  let wrds = Core.String.slice text 0 width in
   match ticks = 0 with
-  | true -> text
+  | true -> wrds
   | false ->
-      let wrds = Core.String.slice text 0 width in
       let nextwrds =
         Core.String.concat
           [ Core.String.slice text 1 lentext; Core.String.slice wrds 0 1 ]
@@ -64,7 +64,8 @@ let run text
   let finaltext =
     getfinaltext (text |> String.concat ~sep:" ") endcap_char endcap_len width
   in
-  print_endline finaltext;
+  print_endline
+    ("ft: " ^ string_of_int (String.length finaltext) ^ " " ^ finaltext);
   let delay =
     [ speed |> string_of_int; "ms" ]
     |> String.concat |> Time_float_unix.Span.of_string

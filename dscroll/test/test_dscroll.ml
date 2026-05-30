@@ -1,12 +1,12 @@
 QCheck_base_runner.run_tests_main
   [
     QCheck2.(
-      Test.make ~count:10 ~name:"gno"
+      Test.make ~count:10000 ~name:"gno"
         ~print:Print.(quad string int int int)
         Gen.(
           quad
-            (string_size_of (int_range 1 100) printable)
-            (int_range 1 100) (int_range 2 100) (int_range 1 500))
+            (string_size_of (int_range 1 150) printable)
+            (int_range 1 130) (int_range 2 190) (int_range 1 700))
         (fun (text, ecl, wid, frm) ->
           assume
             (text
