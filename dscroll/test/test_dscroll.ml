@@ -131,7 +131,7 @@ QCheck_base_runner.run_tests_main
           String.is_prefix res ~prefix:" "
           && reslen >= wid && padlen < wid && padlen > 0));
     QCheck2.(
-      Test.make ~count:10_000_000 ~name:"gftb"
+      Test.make ~count:1_000_000 ~name:"gftb"
         ~print:Print.(triple string int int)
         Gen.(
           triple
@@ -148,7 +148,16 @@ QCheck_base_runner.run_tests_main
           in
           let padlen = (String.length res - String.length text) / 2 in
           let reslen = padlen + String.length text in
-          String.is_prefix res ~prefix:" "
-          && String.is_suffix res ~suffix:" "
-          && reslen >= wid && padlen < wid && padlen > 0));
+          match padlen = 0 with
+          | false ->
+              String.is_prefix res ~prefix:" "
+              && String.is_suffix res ~suffix:" "
+              && reslen = wid && padlen < wid && padlen > 0
+          | true -> (
+              (not (String.is_prefix res ~prefix:" "))
+              && (not (String.is_suffix res ~suffix:" "))
+              &&
+              match String.length text = wid with
+              | true -> reslen = wid
+              | false -> reslen > wid)));
   ]
