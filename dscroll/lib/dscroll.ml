@@ -17,20 +17,20 @@ type cliflags = {
 
 let rec tloop text lentext ticks width direction =
   match direction with
-  | Direction.Left | Bounce -> (
-      let wrds = Core.String.slice text 0 width in
+  | Direction.Bounce -> String.slice text ticks (ticks + width)
+  | Left -> (
+      let wrds = String.slice text 0 width in
       let nextwrds =
-        Core.String.concat
-          [ Core.String.slice text 1 lentext; Core.String.slice wrds 0 1 ]
+        String.concat [ String.slice text 1 lentext; String.slice wrds 0 1 ]
       in
       match ticks = 0 with
       | true -> wrds
       | false -> tloop nextwrds lentext (pred ticks) width Left)
   | Right -> (
-      let wrds = Core.String.suffix text width in
+      let wrds = String.suffix text width in
       let nextwrds =
-        Core.String.concat
-          [ Core.String.suffix wrds 1; Core.String.slice text 0 (lentext - 1) ]
+        String.concat
+          [ String.suffix wrds 1; String.slice text 0 (lentext - 1) ]
       in
       match ticks = 0 with
       | true -> wrds
@@ -53,22 +53,22 @@ let getfinaltext text endcap_char endcap_len width direction =
 
 let getnextoutput text pos len = String.sub text ~pos ~len
 
-let rec loop text (ld : Loopdata.t) delay width frame =
+let rec loop text direction ticks modlen totlen delay width frame =
   let frms =
-    match ld.direction with
-    | Direction.Bounce -> frame % ld.modlen
-    | Left -> frame % ld.modlen
-    | Right -> Option.value_exn ld.totlen - (frame % ld.modlen)
+    match direction with
+    | Direction.Bounce ->
+        if totlen = 0 then 0 else totlen - abs ((frame % modlen) - totlen)
+    | Left -> frame % modlen
+    | Right -> totlen - (frame % modlen)
   in
-  match ld.ticks = 0 with
+  match ticks = 0 with
   | true -> exit 0
   | false ->
       print_string (string_of_int frms ^ " ");
       print_endline (getnextoutput text frms width);
       Time_float_unix.pause delay;
-      (loop [@tailcall]) text
-        { ld with ticks = pred ld.ticks }
-        delay width (succ frame)
+      (loop [@tailcall]) text direction ticks modlen totlen delay width
+        (succ frame)
 
 let run text
     {
@@ -88,38 +88,31 @@ let run text
       (text |> String.concat ~sep:" ")
       endcap_char endcap_len width direction
   in
-  let ld : Loopdata.t =
+  let ticks =
     match direction with
-    | Direction.Bounce ->
-        {
-          direction = Bounce;
-          ticks = ((2 * (String.length finaltext - width)) + 1) * cycles;
-          modlen = String.length finaltext;
-          totlen = None;
-        }
-    | Left ->
-        {
-          direction = Left;
-          ticks = succ (String.length finaltext / 2 * cycles);
-          modlen = String.length finaltext / 2;
-          totlen = None;
-        }
-    | Right ->
-        {
-          direction = Right;
-          ticks = succ (String.length finaltext / 2 * cycles);
-          modlen = String.length finaltext / 2;
-          totlen = Some (String.length finaltext - width);
-        }
+    | Direction.Bounce -> succ (2 * (String.length finaltext - width) * cycles)
+    | Left -> succ (String.length finaltext / 2 * cycles)
+    | Right -> succ (String.length finaltext / 2 * cycles)
   in
-
+  let modlen =
+    match direction with
+    | Direction.Bounce -> 2 * (String.length finaltext - width)
+    | Left -> String.length finaltext / 2
+    | Right -> String.length finaltext / 2
+  in
+  let totlen =
+    match direction with
+    | Direction.Bounce -> String.length finaltext - width
+    | Left -> 0
+    | Right -> String.length finaltext - width
+  in
   print_endline
     ("ft: " ^ string_of_int (String.length finaltext) ^ " " ^ finaltext);
   let delay =
     [ speed |> string_of_int; "ms" ]
     |> String.concat |> Time_float_unix.Span.of_string
   in
-  loop finaltext ld delay width 0
+  loop finaltext direction ticks modlen totlen delay width 0
 
 (* let run text { endcap_char; endcap_len; width; _ } =
   print_endline

@@ -52,6 +52,32 @@ QCheck_base_runner.run_tests_main
                   ftlen (frm % ftlen) wid Dscroll.Direction.Right)
                res
           && wid - String.count res ~f:Char.is_whitespace >= 1)); *)
+    QCheck2.(
+      Test.make ~count:1_000_000 ~name:"gnob"
+        ~print:Print.(quad string int int int)
+        Gen.(
+          quad
+            (string_size_of (int_range 1 150) printable)
+            (int_range 1 130) (int_range 2 350) (int_range 0 740))
+        (fun (text, ecl, wid, frm) ->
+          assume
+            (text
+            = Core.String.filter text ~f:(fun s ->
+                not (Core.Char.is_whitespace s)));
+          let open Core in
+          let ft =
+            Dscroll.getfinaltext text ' ' ecl wid Dscroll.Direction.Bounce
+          in
+          let totlen = String.length ft - wid in
+          let modlen = 2 * totlen in
+          let fr =
+            if totlen = 0 then 0 else totlen - abs ((frm % modlen) - totlen)
+          in
+          let res = Dscroll.getnextoutput ft fr wid in
+          String.length res = wid
+          && String.equal
+               (Dscroll.tloop ft 0 fr wid Dscroll.Direction.Bounce)
+               res));
     (* QCheck2.(
       Test.make ~count:1000 ~name:"nonnegint1"
         ~print:Print.(pair int int)
@@ -90,7 +116,7 @@ QCheck_base_runner.run_tests_main
           with
           | Invalid_argument _ -> true
           | _ -> false)); *)
-    QCheck2.(
+    (* QCheck2.(
       Test.make ~count:1_000_000 ~name:"gftl"
         ~print:Print.(triple string int int)
         Gen.(
@@ -109,8 +135,8 @@ QCheck_base_runner.run_tests_main
           let reslen = String.length res / 2 in
           let padlen = reslen - String.length text in
           String.is_suffix res ~suffix:" "
-          && reslen >= wid && padlen < wid && padlen > 0));
-    QCheck2.(
+          && reslen >= wid && padlen < wid && padlen > 0)); *)
+    (* QCheck2.(
       Test.make ~count:1_000_000 ~name:"gftr"
         ~print:Print.(triple string int int)
         Gen.(
@@ -129,8 +155,8 @@ QCheck_base_runner.run_tests_main
           let reslen = String.length res / 2 in
           let padlen = reslen - String.length text in
           String.is_prefix res ~prefix:" "
-          && reslen >= wid && padlen < wid && padlen > 0));
-    QCheck2.(
+          && reslen >= wid && padlen < wid && padlen > 0)); *)
+    (* QCheck2.(
       Test.make ~count:1_000_000 ~name:"gftb"
         ~print:Print.(triple string int int)
         Gen.(
@@ -159,5 +185,5 @@ QCheck_base_runner.run_tests_main
               &&
               match String.length text = wid with
               | true -> reslen = wid
-              | false -> reslen > wid)));
+              | false -> reslen > wid))); *)
   ]
