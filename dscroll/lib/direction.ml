@@ -1,6 +1,7 @@
 open Core
 
-type t = Left | Right | Bounce [@@deriving sexp]
+(* compare *)
+type t = Left | Right | Bounce [@@deriving equal, sexp]
 
 let arg =
   Command.Arg_type.of_alist_exn ~accept_unique_prefixes:true
