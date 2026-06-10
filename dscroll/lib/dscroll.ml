@@ -1,6 +1,7 @@
 open Core
 module Direction = Direction
 module Ints = Ints
+module Mode = Mode
 
 type cliflags = {
   cycles : int;
@@ -8,7 +9,7 @@ type cliflags = {
   endcap_char : char;
   endcap_len : int;
   initial_pause : int;
-  no_newline : Bool.t;
+  output_mode : Mode.t;
   prefix : string;
   speed : int;
   suffix : string;
@@ -60,7 +61,7 @@ let run text
       endcap_char;
       endcap_len;
       initial_pause;
-      no_newline;
+      output_mode;
       prefix;
       speed;
       suffix;
@@ -93,9 +94,9 @@ let run text
   let delay = Time_float_unix.Span.of_string [%string "%{speed#Int}ms"] in
   let rec loop ticks frame =
     let frms = getframe frame in
-    if ticks = 0 then (
-      if no_newline then print_endline "";
-      exit 0)
+    if ticks = 0 then
+      (* if no_newline then print_endline ""; *)
+      exit 0
     else print_string (string_of_int frms ^ " ");
     let _ =
       if frame = 1 then
@@ -103,8 +104,8 @@ let run text
         |> Time_float_unix.pause
       else ()
     in
-    if no_newline then print_string (getnextoutput finaltext frms width);Out_channel.flush stdout;
-    else print_endline (getnextoutput finaltext frms width);
+    (* if no_newline then print_string (getnextoutput finaltext frms width);Out_channel.flush stdout;
+    else print_endline (getnextoutput finaltext frms width); *)
     Time_float_unix.pause delay;
     (loop [@tailcall]) (pred ticks) (succ frame)
   in

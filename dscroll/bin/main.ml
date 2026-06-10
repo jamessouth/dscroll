@@ -24,9 +24,10 @@ let flags : cliflags Command.Param.t =
       Ints.nonneg
       (fun x -> Int.sexp_of_t x)
       ~default:0 ~doc:"int wait in ms before scrolling begins"
-  and no_newline =
-    flag "--no-newline" ~aliases:[ "-nnl" ] no_arg
-      ~doc:" do not add newline to output"
+  and output_mode =
+    flag_optional_with_default_doc "--output-mode" ~aliases:[ "-o" ] Mode.arg
+      Mode.sexp_of_t ~default:Newline
+      ~doc:"string print with \\n, \\r, or sequence"
   and prefix =
     flag_optional_with_default_doc "--prefix" ~aliases:[ "-p" ] string
       (fun x -> String.sexp_of_t x)
@@ -50,7 +51,7 @@ let flags : cliflags Command.Param.t =
     endcap_char;
     endcap_len;
     initial_pause;
-    no_newline;
+    output_mode;
     prefix;
     speed;
     suffix;
