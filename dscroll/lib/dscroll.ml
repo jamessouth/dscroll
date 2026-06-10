@@ -73,10 +73,10 @@ let run text
   in
   let lentext = String.length finaltext in
   let lenminuswidth = lentext - width in
-  let halflen = lentext / 2 in
+  let halflen = lentext asr 1 in
   let ticks =
     match direction with
-    | Direction.Bounce -> succ (2 * lenminuswidth * cycles)
+    | Direction.Bounce -> succ ((lenminuswidth * cycles) lsl 1)
     | Left -> succ (halflen * cycles)
     | Right -> succ (halflen * cycles)
   in
@@ -85,7 +85,7 @@ let run text
     | Direction.Bounce ->
         let totlen = lenminuswidth in
         if totlen = 0 then 0
-        else totlen - abs ((frame % (2 * lenminuswidth)) - totlen)
+        else totlen - abs ((frame % (lenminuswidth lsl 1)) - totlen)
     | Left -> frame % halflen
     | Right -> lenminuswidth - (frame % halflen)
   in
@@ -93,8 +93,18 @@ let run text
   let delay = Time_float_unix.Span.of_string [%string "%{speed#Int}ms"] in
   let rec loop ticks frame =
     let frms = getframe frame in
-    if ticks = 0 then exit 0 else print_string (string_of_int frms ^ " ");
-    print_endline (getnextoutput finaltext frms width);
+    if ticks = 0 then (
+      if no_newline then print_endline "";
+      exit 0)
+    else print_string (string_of_int frms ^ " ");
+    let _ =
+      if frame = 1 then
+        Time_float_unix.Span.of_string [%string "%{initial_pause#Int}ms"]
+        |> Time_float_unix.pause
+      else ()
+    in
+    if no_newline then print_string (getnextoutput finaltext frms width);Out_channel.flush stdout;
+    else print_endline (getnextoutput finaltext frms width);
     Time_float_unix.pause delay;
     (loop [@tailcall]) (pred ticks) (succ frame)
   in
