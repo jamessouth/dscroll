@@ -84,9 +84,9 @@ let run text
   let getframe frame =
     match direction with
     | Direction.Bounce ->
-        let totlen = lenminuswidth in
-        if totlen = 0 then 0
-        else totlen - abs ((frame % (lenminuswidth lsl 1)) - totlen)
+        if lenminuswidth = 0 then 0
+        else
+          lenminuswidth - abs ((frame % (lenminuswidth lsl 1)) - lenminuswidth)
     | Left -> frame % halflen
     | Right -> lenminuswidth - (frame % halflen)
   in
@@ -95,7 +95,7 @@ let run text
   let rec loop ticks frame =
     let frms = getframe frame in
     if ticks = 0 then
-      (* if no_newline then print_endline ""; *)
+      let _ = match output_mode with Newline -> () | _ -> print_endline "" in
       exit 0
     else print_string (string_of_int frms ^ " ");
     let _ =
@@ -104,8 +104,15 @@ let run text
         |> Time_float_unix.pause
       else ()
     in
-    (* if no_newline then print_string (getnextoutput finaltext frms width);Out_channel.flush stdout;
-    else print_endline (getnextoutput finaltext frms width); *)
+    let op = getnextoutput finaltext frms width in
+    let _ =
+      match output_mode with
+      | Newline -> print_endline op
+      (* Out_channel.flush stdout *)
+      | Return str | Sequence str ->
+          print_string (op ^ str);
+          Out_channel.flush stdout
+    in
     Time_float_unix.pause delay;
     (loop [@tailcall]) (pred ticks) (succ frame)
   in

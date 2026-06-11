@@ -11,12 +11,11 @@ let flags : cliflags Command.Param.t =
       Direction.sexp_of_t ~default:Left
       ~doc:"string scroll left, right, or bounce"
   and endcap_char =
-    flag_optional_with_default_doc "--endcap-char" ~aliases:[ "-ecc" ] char
+    flag_optional_with_default_doc "--endcap-char" ~aliases:[ "-h" ] char
       (fun x -> Char.sexp_of_t x)
       ~default:' ' ~doc:"char pad between end and start of TEXT"
   and endcap_len =
-    flag_optional_with_default_doc "--endcap-len" ~aliases:[ "-ecl" ]
-      Ints.oneplus
+    flag_optional_with_default_doc "--endcap-len" ~aliases:[ "-l" ] Ints.oneplus
       (fun x -> Int.sexp_of_t x)
       ~default:1 ~doc:"int minimum length of endcap"
   and initial_pause =
@@ -27,13 +26,13 @@ let flags : cliflags Command.Param.t =
   and output_mode =
     flag_optional_with_default_doc "--output-mode" ~aliases:[ "-o" ] Mode.arg
       Mode.sexp_of_t ~default:Newline
-      ~doc:"string print with \\n, \\r, or sequence"
+      ~doc:"string print with \\n, \\r, or spaces"
   and prefix =
     flag_optional_with_default_doc "--prefix" ~aliases:[ "-p" ] string
       (fun x -> String.sexp_of_t x)
       ~default:"" ~doc:"string prefix at left of display"
   and speed =
-    flag_optional_with_default_doc "--speed" ~aliases:[ "-sp" ] Ints.oneplus
+    flag_optional_with_default_doc "--speed" ~aliases:[ "-e" ] Ints.oneplus
       (fun x -> Int.sexp_of_t x)
       ~default:300 ~doc:"int sleep in ms per scroll of TEXT"
   and suffix =

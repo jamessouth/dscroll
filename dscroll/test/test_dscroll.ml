@@ -1,6 +1,6 @@
 QCheck_base_runner.run_tests_main
   [
-    (* QCheck2.(
+    QCheck2.(
       Test.make ~count:1_000_000 ~name:"gnol"
         ~print:Print.(quad string int int int)
         Gen.(
@@ -24,8 +24,8 @@ QCheck_base_runner.run_tests_main
                   (String.sub ft ~pos:0 ~len:ftlen)
                   ftlen (frm % ftlen) wid Dscroll.Direction.Left)
                res
-          && wid - String.count res ~f:Char.is_whitespace >= 1)); *)
-    (* QCheck2.(
+          && wid - String.count res ~f:Char.is_whitespace >= 1));
+    QCheck2.(
       Test.make ~count:1_000_000 ~name:"gnor"
         ~print:Print.(quad string int int int)
         Gen.(
@@ -51,7 +51,7 @@ QCheck_base_runner.run_tests_main
                   (String.sub ft ~pos:0 ~len:ftlen)
                   ftlen (frm % ftlen) wid Dscroll.Direction.Right)
                res
-          && wid - String.count res ~f:Char.is_whitespace >= 1)); *)
+          && wid - String.count res ~f:Char.is_whitespace >= 1));
     QCheck2.(
       Test.make ~count:1_000_000 ~name:"gnob"
         ~print:Print.(quad string int int int)
