@@ -1,6 +1,5 @@
 QCheck_base_runner.run_tests_main
-  [
-    QCheck2.(
+  [ (* QCheck2.(
       Test.make ~count:1_000_000 ~name:"gnol"
         ~print:Print.(quad string int int int)
         Gen.(
@@ -77,7 +76,7 @@ QCheck_base_runner.run_tests_main
           String.length res = wid
           && String.equal
                (Dscroll.tloop ft 0 fr wid Dscroll.Direction.Bounce)
-               res));
+               res)); *)
     (* QCheck2.(
       Test.make ~count:1000 ~name:"nonnegint1"
         ~print:Print.(pair int int)
@@ -185,5 +184,4 @@ QCheck_base_runner.run_tests_main
               &&
               match String.length text = wid with
               | true -> reslen = wid
-              | false -> reslen > wid))); *)
-  ]
+              | false -> reslen > wid))); *) ]

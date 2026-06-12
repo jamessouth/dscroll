@@ -1,4 +1,5 @@
 open Core
+module Bench = Bench
 module Direction = Direction
 module Ints = Ints
 module Mode = Mode
@@ -52,7 +53,7 @@ let getfinaltext text endcap_char endcap_len width direction =
   | Left -> String.concat [ text; ec; text; ec ]
   | Right -> String.concat [ ec; text; ec; text ]
 
-let getnextoutput text pos len = String.sub text ~pos ~len
+(* let getnextoutput text pos len = String.sub text ~pos ~len *)
 
 let run text
     {
@@ -90,33 +91,44 @@ let run text
     | Left -> frame % halflen
     | Right -> lenminuswidth - (frame % halflen)
   in
-  print_endline ("ft: " ^ string_of_int lentext ^ " " ^ finaltext);
-  let delay = Time_float_unix.Span.of_string [%string "%{speed#Int}ms"] in
-  let rec loop ticks frame =
-    let frms = getframe frame in
-    if ticks = 0 then
-      let _ = match output_mode with Newline -> () | _ -> print_endline "" in
-      exit 0
-    else print_string (string_of_int frms ^ " ");
-    let _ =
-      if frame = 1 then
-        Time_float_unix.Span.of_string [%string "%{initial_pause#Int}ms"]
-        |> Time_float_unix.pause
-      else ()
-    in
-    let op = getnextoutput finaltext frms width in
-    let _ =
-      match output_mode with
-      | Newline -> print_endline op
-      (* Out_channel.flush stdout *)
-      | Return str | Sequence str ->
-          print_string (op ^ str);
+  (* print_endline ("ft: " ^ string_of_int lentext ^ " " ^ finaltext); *)
+  let delay = float_of_int speed /. 1000.0 in
+  let initial_delay = float_of_int initial_pause /. 1000.0 in
+  let len = width in
+  let buf = finaltext in
+  let printxxx =
+    match output_mode with
+    | Newline -> fun () -> print_endline suffix
+    | Return str | Sequence str ->
+        fun () ->
+          print_string suffix;
+          print_string str;
           Out_channel.flush stdout
-    in
-    Time_float_unix.pause delay;
-    (loop [@tailcall]) (pred ticks) (succ frame)
   in
-  loop ticks 0
+
+  let rec loop ticks frame =
+    if ticks <= 0 then
+      let _ = match output_mode with Newline -> () | _ -> print_endline "" in
+      (* exit 0 *)
+      ()
+    else begin
+      let pos = getframe frame in
+      (* print_string (string_of_int pos ^ " " ^ string_of_int ticks ^ "  "); *)
+      if frame = 1 then ignore (Caml_unix.select [] [] [] initial_delay);
+      (* let op = getnextoutput finaltext pos width in *)
+      print_string prefix;
+      Out_channel.output_substring stdout ~buf ~pos ~len;
+      printxxx ();
+      (* Time_float_unix.pause delay; *)
+      ignore (Caml_unix.select [] [] [] delay);
+      (loop [@tailcall]) (pred ticks) (succ frame)
+    end
+  in
+  let (), metrics = Bench.profile_allocation (fun () -> loop ticks 0) in
+  printf "\n=== Benchmark Results ===\n";
+  printf "Minor words: %0.0f\n" metrics.minor_alloc;
+  printf "Major words: %0.0f\n%!" metrics.major_alloc;
+  exit 0
 
 (* let run text { endcap_char; endcap_len; width; _ } =
   print_endline
