@@ -55,7 +55,7 @@ let getfinaltext text endcap_char endcap_len width direction =
 
 (* let getnextoutput text pos len = String.sub text ~pos ~len *)
 
-let run text
+let runn text
     {
       cycles;
       direction;
@@ -92,8 +92,8 @@ let run text
     | Right -> lenminuswidth - (frame % halflen)
   in
   (* print_endline ("ft: " ^ string_of_int lentext ^ " " ^ finaltext); *)
-  let delay = float_of_int speed /. 1000.0 in
-  let initial_delay = float_of_int initial_pause /. 1000.0 in
+  (* let delay = float_of_int speed /. 1000.0 in *)
+  (* let initial_delay = float_of_int initial_pause /. 1000.0 in *)
   let len = width in
   let buf = finaltext in
   let printxxx =
@@ -114,13 +114,13 @@ let run text
     else begin
       let pos = getframe frame in
       (* print_string (string_of_int pos ^ " " ^ string_of_int ticks ^ "  "); *)
-      if frame = 1 then ignore (Caml_unix.select [] [] [] initial_delay);
+      if frame = 1 then Bench.unsafe_nanosleep_ms initial_pause;
       (* let op = getnextoutput finaltext pos width in *)
       print_string prefix;
       Out_channel.output_substring stdout ~buf ~pos ~len;
       printxxx ();
       (* Time_float_unix.pause delay; *)
-      ignore (Caml_unix.select [] [] [] delay);
+      Bench.unsafe_nanosleep_ms speed;
       (loop [@tailcall]) (pred ticks) (succ frame)
     end
   in
@@ -130,9 +130,7 @@ let run text
   printf "Major words: %0.0f\n%!" metrics.major_alloc;
   exit 0
 
-(* let run text { endcap_char; endcap_len; width; _ } =
-  print_endline
-    (getfinaltext (text |> String.concat ~sep:" ") endcap_char endcap_len width) *)
+let run text flags = Bench.benchmark 1_00
 
 (* let run text flags =
   List.iter text ~f:(fun word -> printf "%s " word);

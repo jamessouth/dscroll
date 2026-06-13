@@ -1,6 +1,9 @@
 (executable
- (public_name dscroll)
- (name main)
  (libraries core core_unix.command_unix dscroll)
+ (modes native)
+ (name main)
+ (ocamlopt_flags
+  (:standard -S))
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane))
+ (public_name dscroll))

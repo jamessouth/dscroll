@@ -1,5 +1,8 @@
 (library
- (name dscroll)
+ (foreign_stubs
+  (language c)
+  (names nanosleep_stub))
  (libraries core core_unix.time_float_unix)
+ (name dscroll)
  (preprocess
   (pps ppx_jane)))
