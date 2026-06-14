@@ -1,4 +1,5 @@
 (library
+ ; (flags :standard -O3 -unbox-closures)
  (foreign_stubs
   (language c)
   (names nanosleep_stub))

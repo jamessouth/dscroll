@@ -4,6 +4,11 @@ module Direction = Direction
 module Ints = Ints
 module Mode = Mode
 
+module Loop = struct
+  external unsafe_long_nanosleep : int -> unit = "caml_long_nanosleep"
+  [@@noalloc]
+end
+
 type cliflags = {
   cycles : int;
   direction : Direction.t;
@@ -92,7 +97,7 @@ let runn text
     | Right -> lenminuswidth - (frame % halflen)
   in
   (* print_endline ("ft: " ^ string_of_int lentext ^ " " ^ finaltext); *)
-  (* let delay = float_of_int speed /. 1000.0 in *)
+  (* let delay = Time_float_unix.Span.of_int_ms speed in *)
   (* let initial_delay = float_of_int initial_pause /. 1000.0 in *)
   let len = width in
   let buf = finaltext in
@@ -105,171 +110,63 @@ let runn text
           print_string str;
           Out_channel.flush stdout
   in
-
-  let rec loop ticks frame =
-    if ticks <= 0 then
+  print_endline (string_of_int (getframe 1));
+  ignore printxxx;
+  print_endline (string_of_int len);
+  print_endline buf;
+  let rec loop ticks frame = () in
+  loop ticks 0
+(* if ticks <= 0 then
       let _ = match output_mode with Newline -> () | _ -> print_endline "" in
       (* exit 0 *)
       ()
     else begin
       let pos = getframe frame in
       (* print_string (string_of_int pos ^ " " ^ string_of_int ticks ^ "  "); *)
-      if frame = 1 then Bench.unsafe_nanosleep_ms initial_pause;
+      if frame = 1 then Loop.unsafe_long_nanosleep initial_pause;
       (* let op = getnextoutput finaltext pos width in *)
       print_string prefix;
       Out_channel.output_substring stdout ~buf ~pos ~len;
       printxxx ();
       (* Time_float_unix.pause delay; *)
-      Bench.unsafe_nanosleep_ms speed;
+      Loop.unsafe_long_nanosleep speed;
       (loop [@tailcall]) (pred ticks) (succ frame)
     end
   in
-  let (), metrics = Bench.profile_allocation (fun () -> loop ticks 0) in
+  let (), metrics = Bench.profile_allocation_precise (fun () -> loop ticks 0) in
   printf "\n=== Benchmark Results ===\n";
-  printf "Minor words: %0.0f\n" metrics.minor_alloc;
-  printf "Major words: %0.0f\n%!" metrics.major_alloc;
-  exit 0
+  printf "Minor words: %d\n" metrics.minor_words_allocated;
+  printf "Major words: %d\n%!" metrics.major_words_allocated;
+  exit 0 *)
 
-let run text flags = Bench.benchmark 1_00
+let run text
+    {
+      cycles;
+      direction;
+      endcap_char;
+      endcap_len;
+      initial_pause;
+      output_mode;
+      prefix;
+      speed;
+      suffix;
+      width;
+    } =
+  let (), elapsed_us =
+    Bench.profile_startup_ns (fun () ->
+        runn text
+          {
+            cycles;
+            direction;
+            endcap_char;
+            endcap_len;
+            initial_pause;
+            output_mode;
+            prefix;
+            speed;
+            suffix;
+            width;
+          })
+  in
 
-(* let run text flags =
-  List.iter text ~f:(fun word -> printf "%s " word);
-  flags.width |> string_of_int |> print_endline;
-  flags.direction |> Direction.sexp_of_t |> print_s;
-  flags.prefix |> print_endline;
-  flags.suffix |> print_endline;
-  "vvv" ^ String.make flags.endcap_len flags.endcap_char ^ "bbbb"
-  |> print_endline;
-  flags.speed |> string_of_int |> print_endline;
-  flags.no_newline |> printf "%B\n" *)
-
-(* ------------------------------------------ *)
-
-(* ----------------------------------------------*)
-
-(* open Core
-
-type t = {
-  (* We use an internal mutable buffer that expands if new text is longer *)
-  mutable buffer   : bytes;
-  mutable orig_len : int;
-}
-
-(* Creates a scroller. Allocates exactly twice the text length. *)
-let create (initial_text : string) : t =
-  let len = String.length initial_text in
-  let double_len = len * 2 in
-  let buffer = Bytes.create double_len in
-  if len > 0 then begin
-    Bytes.blit_string ~src:initial_text ~src_pos:0 ~dst:buffer ~dst_pos:0 ~len;
-    Bytes.blit_string ~src:initial_text ~src_pos:0 ~dst:buffer ~dst_pos:len ~len;
-  end;
-  { buffer; orig_len = len }
-
-(* Update the text on the fly. 
-   Only re-allocates a buffer if the new text is strictly larger. *)
-let update_text (s : t) (new_text : string) : unit =
-  let len = String.length new_text in
-  let required_space = len * 2 in
-  s.orig_len <- len;
-  
-  if len > 0 then begin
-    (* Resize internal buffer only if it's too small *)
-    if Bytes.length s.buffer < required_space then begin
-      s.buffer <- Bytes.create required_space
-    end;
-    (* Mirror the text into our reusable memory buffer *)
-    Bytes.blit_string ~src:new_text ~src_pos:0 ~dst:s.buffer ~dst_pos:0 ~len;
-    Bytes.blit_string ~src:new_text ~src_pos:0 ~dst:s.buffer ~dst_pos:len ~len;
-  end
-
-(* Zero-allocation draw. Extracts the rotated text slice without allocations. *)
-let blit_frame (s : t) (offset : int) (dst : bytes) ~dst_pos ~view_len : unit =
-  if s.orig_len = 0 then ()
-  else begin
-    let safe_offset = offset % s.orig_len in
-    (* Limit rendering length to whichever is smaller: the screen view or text *)
-    let render_len = Int.min view_len s.orig_len in
-    Bytes.blit 
-      ~src:s.buffer ~src_pos:safe_offset 
-      ~dst ~dst_pos ~len:render_len
-  end
-
-
-  Zero Allocations During Scroll: When your main animation tick loops and calls blit_frame, it reads directly out of the existing buffer and puts it straight into your UI/terminal rendering array (dst). The OCaml GC does completely zero work.Cheap Track Changes: When your music player switches tracks, you simply call update_text scroller "Now Playing: Daft Punk - One More Time".Smart Memory Management: Notice the if Bytes.length s.buffer < required_space check inside update_text. If the new song title is shorter than or equal to the previous song, it doesn't allocate any new memory at all. It just overwrites the bytes already sitting on the heap.
-
-    (* 1. Initialize once *)
-let scroller = create "Initial Booting Text... "
-let screen_output = Bytes.create 20 (* Your fixed window screen size *)
-
-(* 2. Inside your 60FPS or sub-second timer loop *)
-let run_tick frame_count =
-  (* Draw frame into screen_output completely garbage-free *)
-  blit_frame scroller frame_count screen_output ~dst_pos:0 ~view_len:20;
-  render_to_screen screen_output
-
-(* 3. Inside your asynchronous music player hook *)
-let on_song_change new_track_title =
-  update_text scroller (new_track_title ^ "   ***   ")
-
-
-  Since you are writing straight to stdout, we can optimize this further by avoiding allocations during string printing.In OCaml, functions like print_string or printf have to allocate memory internally or do conversions. To keep your loop completely garbage-collector free, you should write your bytes buffer directly to the terminal's file descriptor using Out_channel.output_bytes.Here is how to set up a clean, non-allocating render loop using plain stdout.
-
-  open Core
-
-(* Reusing the scroller module from our previous conversation *)
-let scroller = create "Now Playing: Daft Punk - One More Time  ***  "
-let view_width = 20
-let screen_output = Bytes.create view_width
-
-(* This terminal escape code moves the cursor back to the start of the line *)
-let carriage_return = "\r"
-
-let run_animation_loop () =
-  let offset = ref 0 in
-  
-  while true do
-    (* 1. Pull the correct frame into our reusable bytes container *)
-    blit_frame scroller !offset screen_output ~dst_pos:0 ~view_len:view_width;
-    
-    (* 2. Reset terminal cursor back to column 0 without allocating *)
-    Out_channel.output_string stdout carriage_return;
-    
-    (* 3. Blast the binary bytes directly into stdout *)
-    Out_channel.output_bytes stdout screen_output;
-    
-    (* 4. Force the OS to flush the stdout buffer immediately *)
-    Out_channel.flush stdout;
-    
-    (* 5. Advance frame counter & sleep (e.g., 150ms for smooth scroll) *)
-    offset := !offset + 1;
-    Time_float.sleep 0.150
-  done
-
-
-  \r vs \n: Using the carriage return (\r) brings the cursor back to the beginning of the current row instead of starting a new line (\n). This makes the text cleanly overwrite itself in place on your terminal window.Out_channel.output_bytes: This function copies bytes directly out of your pre-allocated screen_output variable and hands them to the operating system's kernel buffer. It completely skips OCaml's string-building features, ensuring zero memory overhead.Out_channel.flush: By default, standard output buffers data and only pushes it to the monitor when it sees a newline character. Since we are using \r, we manually call flush to force the text onto the screen instantly every single frame.
-
-  open Core
-
-let scroller = create "Now Playing: Daft Punk - One More Time  ***  "
-let view_width = 25
-let screen_output = Bytes.create view_width
-
-let run_animation_loop () =
-  let offset = ref 0 in
-  while true do
-    (* 1. Pull the frame data completely allocation-free *)
-    blit_frame scroller !offset screen_output ~dst_pos:0 ~view_len:view_width;
-    
-    (* 2. Send the exact slice directly to stdout *)
-    Out_channel.output_bytes stdout screen_output;
-    
-    (* 3. Polybar updates *only* when it hits a fresh newline character *)
-    Out_channel.output_string stdout "\n";
-    
-    (* 4. Instantly force the payload out of the runtime buffer *)
-    Out_channel.flush stdout;
-    
-    offset := !offset + 1;
-    Time_float.sleep 0.200 (* 200ms gives a natural ticker speed *)
-  done *)
+  Printf.printf "Startup and transition took: %d microseconds\n" elapsed_us

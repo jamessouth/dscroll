@@ -1,27 +1,15 @@
 __asm__(
-".global caml_raw_nanosleep_ms\n"
-".type caml_raw_nanosleep_ms, @function\n"
-"caml_raw_nanosleep_ms:\n"
+".global caml_long_nanosleep\n"
+".type caml_long_nanosleep, @function\n"
+"caml_long_nanosleep:\n"
 "    sar $1, %rdi\n"
+"    imul $1000000, %rdi, %rax\n"
 "    push %r11\n"
-"    mov %rdi, %rax\n"
 "    xor %rdx, %rdx\n"
 "    mov $1000000000, %rcx\n"
 "    div %rcx\n"
 "    push %rdx\n"
 "    push %rax\n"
-"    jmp make_syscall_and_return\n"
-
-".global caml_raw_nanosleep_ns_fast\n"
-".type caml_raw_nanosleep_ns_fast, @function\n"
-"caml_raw_nanosleep_ns_fast:\n"
-"    sar $1, %rdi\n"
-"    push %r11\n"
-"    push %rdi\n"
-"    pushq $0\n"
-"    jmp make_syscall_and_return\n"
-
-"make_syscall_and_return:\n"
 "    mov $35, %rax\n"
 "    mov %rsp, %rdi\n"
 "    xor %rsi, %rsi\n"
@@ -31,3 +19,4 @@ __asm__(
 "    mov $1, %rax\n"
 "    ret\n"
 );
+
