@@ -44,7 +44,50 @@ let rec tloop text lentext ticks width direction =
       | false -> tloop nextwrds lentext (pred ticks) width Right)
 
 let getfinaltext text endcap_char endcap_len width direction =
-  let ecl =
+let tl,str_lens =
+        List.fold_map text ~init:0 ~f:(fun acc s -> let sl = String.length s in acc + sl + 1,sl)
+in let text_len = pred tl
+  in
+  let width_minus_text_len = width - text_len in
+
+   let ecl =
+    if Direction.equal direction Bounce then 
+      Int.max 0 width_minus_text_len
+    else
+      Int.clamp_exn
+        (Int.max endcap_len width_minus_text_len)
+        ~min:1
+        ~max:(pred width)
+  in
+  let halflen = text_len + ecl in
+  let total_len =
+    match direction with
+    | Bounce -> ecl + halflen
+
+    | Left | Right -> halflen lsl 1
+  in
+
+    let buf = Bytes.create total_len in
+
+  let blit_text_list initial_pos =
+    let rec loop pos txt sls= match txt,sls with
+      | [],[] -> ()
+      | [ s ],[l] ->
+          Bytes.From_string.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:pos ~len:l
+          | s :: t,u::v ->
+            Bytes.From_string.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:pos ~len:u;
+          Bytes.set buf (pos + u) ' ';
+          loop (pos + u + 1) t v
+          |_,_ -> ()
+    in
+    loop initial_pos text str_lens
+  in
+
+  let blit_endcap pos endcap_char = Bytes.set buf pos  endcap_char in
+
+  
+
+  (* let ecl =
     if Direction.equal direction Bounce then
       Int.max 0 (width - String.length text)
     else
@@ -56,7 +99,7 @@ let getfinaltext text endcap_char endcap_len width direction =
   match direction with
   | Bounce -> String.concat [ ec; text; ec ]
   | Left -> String.concat [ text; ec; text; ec ]
-  | Right -> String.concat [ ec; text; ec; text ]
+  | Right -> String.concat [ ec; text; ec; text ] *)
 
 (* let getnextoutput text pos len = String.sub text ~pos ~len *)
 
@@ -111,7 +154,7 @@ let runn text
           Out_channel.flush stdout
   in
   print_endline (string_of_int (getframe 1));
-  ignore printxxx;
+  printxxx ();
   print_endline (string_of_int len);
   print_endline buf;
   let rec loop ticks frame = () in
@@ -152,7 +195,7 @@ let run text
       suffix;
       width;
     } =
-  let (), elapsed_us =
+  (* let (), elapsed_us =
     Bench.profile_startup_ns (fun () ->
         runn text
           {
@@ -169,4 +212,24 @@ let run text
           })
   in
 
-  Printf.printf "Startup and transition took: %d microseconds\n" elapsed_us
+  Printf.printf "Startup and transition took: %d microseconds\n" elapsed_us *)
+  let (), metrics =
+    Bench.profile_allocation (fun () ->
+        runn text
+          {
+            cycles;
+            direction;
+            endcap_char;
+            endcap_len;
+            initial_pause;
+            output_mode;
+            prefix;
+            speed;
+            suffix;
+            width;
+          })
+  in
+  printf "\n=== Benchmark Results ===\n";
+  printf "Minor words: %0.0f\n" metrics.minor_alloc;
+  printf "Major words: %0.0f\n%!" metrics.major_alloc;
+  exit 0

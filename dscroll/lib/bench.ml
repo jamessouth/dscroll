@@ -34,3 +34,19 @@ let profile_allocation_precise f =
     }
   in
   (result, snapshot)
+
+type gc_snapshot = { minor_alloc : float; major_alloc : float }
+
+let profile_allocation f =
+  Gc.full_major ();
+  let start_stats = Gc.quick_stat () in
+  let result = f () in
+  Gc.minor ();
+  let end_stats = Gc.quick_stat () in
+  let snapshot =
+    {
+      minor_alloc = end_stats.minor_words -. start_stats.minor_words;
+      major_alloc = end_stats.major_words -. start_stats.major_words;
+    }
+  in
+  (result, snapshot)
