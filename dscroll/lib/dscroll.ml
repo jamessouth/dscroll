@@ -1,5 +1,5 @@
 open Core
-module Bench = Bench
+module Benchmk = Benchmk
 module Direction = Direction
 module Ints = Ints
 module Mode = Mode
@@ -43,51 +43,73 @@ let rec tloop text lentext ticks width direction =
       | true -> wrds
       | false -> tloop nextwrds lentext (pred ticks) width Right)
 
-let getfinaltext text endcap_char endcap_len width direction =
-let tl,str_lens =
-        List.fold_map text ~init:0 ~f:(fun acc s -> let sl = String.length s in acc + sl + 1,sl)
-in let text_len = pred tl
+let rec blit_text_list ~dst text pos =
+  match text with
+  | [] -> ()
+  | [ s ] ->
+      let len = String.length s in
+      Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len
+  | s :: ts ->
+      let len = String.length s in
+      Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len;
+      Bytes.set dst (pos + len) ' ';
+      blit_text_list ~dst ts (pos + len + 1)
+
+(* 
+  let blit_text_list initial_pos =
+    let rec loop pos = function
+      | [] -> ()
+      | [ s ] ->
+          let len = String.length s in
+          Bytes.From_string.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:pos ~len
+      | s :: ts ->
+          let len = String.length s in
+          Bytes.From_string.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:pos ~len;
+          Bytes.set buf (pos + len) ' ';
+          loop (pos + len + 1) ts
+    in
+    loop initial_pos text *)
+
+let getfinaltext2 text endcap_char endcap_len width direction =
+  let text_len =
+    List.fold text ~init:(-1) ~f:(fun acc s -> acc + String.length s + 1)
   in
   let width_minus_text_len = width - text_len in
 
-   let ecl =
-    if Direction.equal direction Bounce then 
-      Int.max 0 width_minus_text_len
+  let ecl =
+    if Direction.equal direction Bounce then Int.max 0 width_minus_text_len
     else
       Int.clamp_exn
         (Int.max endcap_len width_minus_text_len)
-        ~min:1
-        ~max:(pred width)
+        ~min:1 ~max:(pred width)
   in
   let halflen = text_len + ecl in
   let total_len =
     match direction with
     | Bounce -> ecl + halflen
-
     | Left | Right -> halflen lsl 1
   in
 
-    let buf = Bytes.create total_len in
+  let buf = Bytes.create total_len in
 
-  let blit_text_list initial_pos =
-    let rec loop pos txt sls= match txt,sls with
-      | [],[] -> ()
-      | [ s ],[l] ->
-          Bytes.From_string.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:pos ~len:l
-          | s :: t,u::v ->
-            Bytes.From_string.blit ~src:s ~src_pos:0 ~dst:buf ~dst_pos:pos ~len:u;
-          Bytes.set buf (pos + u) ' ';
-          loop (pos + u + 1) t v
-          |_,_ -> ()
-    in
-    loop initial_pos text str_lens
-  in
+  (match direction with
+  | Bounce ->
+      Bytes.fill buf ~pos:0 ~len:ecl endcap_char;
+      blit_text_list ~dst:buf text ecl;
+      Bytes.fill buf ~pos:(ecl + text_len) ~len:ecl endcap_char
+  | Left ->
+      blit_text_list ~dst:buf text 0;
+      Bytes.fill buf ~pos:text_len ~len:ecl endcap_char;
+      Bytes.blit ~src:buf ~src_pos:0 ~dst:buf ~dst_pos:halflen ~len:halflen
+  | Right ->
+      Bytes.fill buf ~pos:0 ~len:ecl endcap_char;
+      blit_text_list ~dst:buf text ecl;
+      Bytes.blit ~src:buf ~src_pos:0 ~dst:buf ~dst_pos:halflen ~len:halflen);
 
-  let blit_endcap pos endcap_char = Bytes.set buf pos  endcap_char in
+  Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
 
-  
-
-  (* let ecl =
+let getfinaltext1 text endcap_char endcap_len width direction =
+  let ecl =
     if Direction.equal direction Bounce then
       Int.max 0 (width - String.length text)
     else
@@ -99,7 +121,7 @@ in let text_len = pred tl
   match direction with
   | Bounce -> String.concat [ ec; text; ec ]
   | Left -> String.concat [ text; ec; text; ec ]
-  | Right -> String.concat [ ec; text; ec; text ] *)
+  | Right -> String.concat [ ec; text; ec; text ]
 
 (* let getnextoutput text pos len = String.sub text ~pos ~len *)
 
@@ -117,9 +139,9 @@ let runn text
       width;
     } =
   let finaltext =
-    getfinaltext
-      (text |> String.concat ~sep:" ")
-      endcap_char endcap_len width direction
+    getfinaltext2
+      (* (text |> String.concat ~sep:" ") *)
+      text endcap_char endcap_len width direction
   in
   let lentext = String.length finaltext in
   let lenminuswidth = lentext - width in
@@ -176,7 +198,7 @@ let runn text
       (loop [@tailcall]) (pred ticks) (succ frame)
     end
   in
-  let (), metrics = Bench.profile_allocation_precise (fun () -> loop ticks 0) in
+  let (), metrics = Benchmk.profile_allocation_precise (fun () -> loop ticks 0) in
   printf "\n=== Benchmark Results ===\n";
   printf "Minor words: %d\n" metrics.minor_words_allocated;
   printf "Major words: %d\n%!" metrics.major_words_allocated;
@@ -195,8 +217,8 @@ let run text
       suffix;
       width;
     } =
-  (* let (), elapsed_us =
-    Bench.profile_startup_ns (fun () ->
+  let (), elapsed_us =
+    Benchmk.profile_startup_ns (fun () ->
         runn text
           {
             cycles;
@@ -212,9 +234,9 @@ let run text
           })
   in
 
-  Printf.printf "Startup and transition took: %d microseconds\n" elapsed_us *)
-  let (), metrics =
-    Bench.profile_allocation (fun () ->
+  Printf.printf "Startup and transition took: %d microseconds\n" elapsed_us
+(* let (), metrics =
+    Benchmk.profile_allocation (fun () ->
         runn text
           {
             cycles;
@@ -232,4 +254,4 @@ let run text
   printf "\n=== Benchmark Results ===\n";
   printf "Minor words: %0.0f\n" metrics.minor_alloc;
   printf "Major words: %0.0f\n%!" metrics.major_alloc;
-  exit 0
+  exit 0 *)

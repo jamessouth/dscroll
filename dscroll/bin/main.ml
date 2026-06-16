@@ -1,7 +1,8 @@
 open Core
+open Core_bench
 open Dscroll
 
-let flags : cliflags Command.Param.t =
+(* let flags : cliflags Command.Param.t =
   let%map_open.Command cycles =
     flag_optional_with_default_doc "--cycles" ~aliases:[ "-c" ] Ints.nonneg
       (fun x -> Int.sexp_of_t x)
@@ -55,13 +56,25 @@ let flags : cliflags Command.Param.t =
     speed;
     suffix;
     width;
-  }
+  } *)
 
-let () =
+(* let () =
   Command_unix.run ~version:"1.0" ~build_info:"RWO"
     (Command.basic ~summary:"Generate an MD5 hash of the input data"
        ~readme:(fun () -> "More detailed information")
        (let%map_open.Command text =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
-        fun () -> run text flags))
+        fun () -> run text flags)) *)
+
+let () =
+  let text = "Hello World" in
+  let text2 = [ "Hello"; "World" ] in
+  Command_unix.run
+    (Bench.make_command
+       [
+         Bench.Test.create ~name:"Original" (fun () ->
+             ignore (getfinaltext1 text '-' 3 20 Direction.Left));
+         Bench.Test.create ~name:"Optimized" (fun () ->
+             ignore (getfinaltext2 text2 '-' 3 20 Direction.Left));
+       ])
