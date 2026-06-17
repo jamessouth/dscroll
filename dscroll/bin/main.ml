@@ -68,13 +68,14 @@ open Dscroll
         fun () -> run text flags)) *)
 
 let () =
-  let text = "Hello World" in
-  let text2 = [ "Hello"; "World" ] in
+  let text = [ "Hlasdfjkl;" ] in
   Command_unix.run
     (Bench.make_command
        [
          Bench.Test.create ~name:"Original" (fun () ->
-             ignore (getfinaltext1 text '-' 3 20 Direction.Left));
+             getfinaltext1
+               (text |> String.concat ~sep:" ")
+               '-' 3 20 Direction.Left);
          Bench.Test.create ~name:"Optimized" (fun () ->
-             ignore (getfinaltext2 text2 '-' 3 20 Direction.Left));
+             getfinaltext2 text '-' 3 20 Direction.Left);
        ])
