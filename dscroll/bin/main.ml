@@ -68,24 +68,21 @@ let () =
         fun () -> run text flags)) *)
 
 let () =
-  let text = [ "Hlakl" ] in
+  let text = [ "rrrrrrrrrrrrr" ] in
   let flags =
     {
-      cycles = 1;
+      cycles = 3;
       direction = Bounce;
       endcap_char = 'q';
       endcap_len = 2;
       initial_pause = 0;
       output_mode = Return "\r";
       prefix = "XXX";
-      speed = 15;
+      speed = 2;
       suffix = "UUU";
       width = 7;
     }
   in
   Command_unix.run
     (Bench.make_command
-       [
-         Bench.Test.create ~name:"Orig" (fun () -> run text flags);
-         Bench.Test.create ~name:"Optimized" (fun () -> runn text flags);
-       ])
+       [ Bench.Test.create ~name:"Optimized" (fun () -> runn text flags) ])
