@@ -56,9 +56,9 @@ open Dscroll
     speed;
     suffix;
     width;
-  } *)
+  }
 
-(* let () =
+let () =
   Command_unix.run ~version:"1.0" ~build_info:"RWO"
     (Command.basic ~summary:"Generate an MD5 hash of the input data"
        ~readme:(fun () -> "More detailed information")
@@ -68,14 +68,24 @@ open Dscroll
         fun () -> run text flags)) *)
 
 let () =
-  let text = [ "Hlasdfjkl;" ] in
+  let text = [ "Hlakl" ] in
+  let flags =
+    {
+      cycles = 1;
+      direction = Bounce;
+      endcap_char = 'q';
+      endcap_len = 2;
+      initial_pause = 0;
+      output_mode = Return "\r";
+      prefix = "XXX";
+      speed = 15;
+      suffix = "UUU";
+      width = 7;
+    }
+  in
   Command_unix.run
     (Bench.make_command
        [
-         Bench.Test.create ~name:"Original" (fun () ->
-             getfinaltext1
-               (text |> String.concat ~sep:" ")
-               '-' 3 20 Direction.Left);
-         Bench.Test.create ~name:"Optimized" (fun () ->
-             getfinaltext2 text '-' 3 20 Direction.Left);
+         Bench.Test.create ~name:"Orig" (fun () -> run text flags);
+         Bench.Test.create ~name:"Optimized" (fun () -> runn text flags);
        ])
