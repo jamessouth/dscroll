@@ -1,8 +1,8 @@
 open Core
-open Core_bench
 open Dscroll
+(* open Core_bench *)
 
-(* let flags : cliflags Command.Param.t =
+let flags : cliflags Command.Param.t =
   let%map_open.Command cycles =
     flag_optional_with_default_doc "--cycles" ~aliases:[ "-c" ] Ints.nonneg
       (fun x -> Int.sexp_of_t x)
@@ -65,24 +65,31 @@ let () =
        (let%map_open.Command text =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
-        fun () -> run text flags)) *)
+        fun () -> run text flags))
 
-let () =
-  let text = [ "rrrrrrrrrrrrr" ] in
+(* let () =
+  let text = [ "mary had" ] in
   let flags =
     {
-      cycles = 3;
+      cycles = 1;
       direction = Bounce;
-      endcap_char = 'q';
+      endcap_char = 'W';
       endcap_len = 2;
       initial_pause = 0;
-      output_mode = Return "\r";
-      prefix = "XXX";
-      speed = 2;
-      suffix = "UUU";
+      output_mode = Newline;
+      prefix = "XX";
+      speed = 32;
+      suffix = "UU";
       width = 7;
     }
   in
   Command_unix.run
     (Bench.make_command
-       [ Bench.Test.create ~name:"Optimized" (fun () -> runn text flags) ])
+       [ Bench.Test.create ~name:"Optimized" (fun () -> run text flags) ]) *)
+
+(* 
+┌───────────┬──────────┬─────────┬────────────┐
+│ Name      │ Time/Run │ mWd/Run │ Percentage │
+├───────────┼──────────┼─────────┼────────────┤
+│ Optimized │  96.61ms │  23.00w │    100.00% │
+└───────────┴──────────┴─────────┴────────────┘ *)

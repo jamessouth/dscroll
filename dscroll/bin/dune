@@ -1,9 +1,14 @@
 (executable
- (libraries core core_bench core_unix.command_unix dscroll)
+ (libraries
+  core
+  ; core_bench
+  core_unix.command_unix
+  dscroll)
  (modes native)
  (name main)
- (ocamlopt_flags
-  (:standard -S))
+ ; preserves asm files
+ ; (ocamlopt_flags
+ ;  (:standard -S))
  (preprocess
   (pps ppx_jane))
  (public_name dscroll))

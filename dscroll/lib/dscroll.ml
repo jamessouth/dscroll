@@ -1,12 +1,44 @@
 open Core
-module Benchmk = Benchmk
-module Direction = Direction
-module Ints = Ints
-module Mode = Mode
+
+module Direction = struct
+  type t = Left | Right | Bounce [@@deriving equal, sexp]
+
+  let arg =
+    Command.Arg_type.of_alist_exn ~accept_unique_prefixes:true
+      ~case_sensitive:false ~list_values_in_help:false
+      [ ("left", Left); ("right", Right); ("bounce", Bounce) ]
+end
+
+module Ints = struct
+  (* The only zeroless pandigital number where the first n digits are divisible by n, used as 'infinity' *)
+  let quasi_inf = 381_654_729
+
+  let getint ~min num =
+    if min |> Int.is_negative then invalid_arg "min must be >= 0"
+    else
+      match num |> int_of_string_opt with
+      | Some n -> Int.max min n
+      | None -> invalid_arg "not an int"
+
+  let nonneg = Command.Arg_type.create (getint ~min:0)
+  let oneplus = Command.Arg_type.create (getint ~min:1)
+  let twoplus = Command.Arg_type.create (getint ~min:2)
+end
 
 module Loop = struct
   external unsafe_long_nanosleep : int -> unit = "caml_long_nanosleep"
   [@@noalloc]
+end
+
+module Mode = struct
+  type t = Newline | Return of string | Sequence of string [@@deriving sexp]
+
+  let arg =
+    Command.Arg_type.of_alist_exn ~accept_unique_prefixes:true
+      ~case_sensitive:false ~list_values_in_help:false
+      [
+        ("newline", Newline); ("return", Return "\r"); ("sequence", Sequence " ");
+      ]
 end
 
 type cliflags = {
@@ -21,39 +53,6 @@ type cliflags = {
   suffix : string;
   width : int;
 }
-
-let rec tloop text lentext ticks width direction =
-  match direction with
-  | Direction.Bounce -> String.slice text ticks (ticks + width)
-  | Left -> (
-      let wrds = String.slice text 0 width in
-      let nextwrds =
-        String.concat [ String.slice text 1 lentext; String.slice wrds 0 1 ]
-      in
-      match ticks = 0 with
-      | true -> wrds
-      | false -> tloop nextwrds lentext (pred ticks) width Left)
-  | Right -> (
-      let wrds = String.suffix text width in
-      let nextwrds =
-        String.concat
-          [ String.suffix wrds 1; String.slice text 0 (lentext - 1) ]
-      in
-      match ticks = 0 with
-      | true -> wrds
-      | false -> tloop nextwrds lentext (pred ticks) width Right)
-
-let rec blit_text_list ~dst text pos =
-  match text with
-  | [] -> ()
-  | [ s ] ->
-      let len = String.length s in
-      Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len
-  | s :: ts ->
-      let len = String.length s in
-      Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len;
-      Bytes.set dst (pos + len) ' ';
-      blit_text_list ~dst ts (pos + len + 1)
 
 let getfinaltext text endcap_char endcap_len width direction =
   let text_len =
@@ -75,6 +74,18 @@ let getfinaltext text endcap_char endcap_len width direction =
     | Left | Right -> halflen lsl 1
   in
 
+  let rec blit_text_list ~dst text pos =
+    match text with
+    | [] -> ()
+    | [ s ] ->
+        let len = String.length s in
+        Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len
+    | s :: ts ->
+        let len = String.length s in
+        Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len;
+        Bytes.set dst (pos + len) ' ';
+        blit_text_list ~dst ts (pos + len + 1)
+  in
   let buf = Bytes.create total_len in
 
   (match direction with
@@ -93,7 +104,7 @@ let getfinaltext text endcap_char endcap_len width direction =
 
   Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
 
-let runn text
+let run text
     {
       cycles;
       direction;

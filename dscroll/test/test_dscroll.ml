@@ -1,3 +1,24 @@
+(* let rec tloop text lentext ticks width direction =
+  match direction with
+  | Direction.Bounce -> String.slice text ticks (ticks + width)
+  | Left -> (
+      let wrds = String.slice text 0 width in
+      let nextwrds =
+        String.concat [ String.slice text 1 lentext; String.slice wrds 0 1 ]
+      in
+      match ticks = 0 with
+      | true -> wrds
+      | false -> tloop nextwrds lentext (pred ticks) width Left)
+  | Right -> (
+      let wrds = String.suffix text width in
+      let nextwrds =
+        String.concat
+          [ String.suffix wrds 1; String.slice text 0 (lentext - 1) ]
+      in
+      match ticks = 0 with
+      | true -> wrds
+      | false -> tloop nextwrds lentext (pred ticks) width Right) *)
+
 QCheck_base_runner.run_tests_main
   [ (* QCheck2.(
       Test.make ~count:1_000_000 ~name:"gnol"
