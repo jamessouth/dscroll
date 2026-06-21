@@ -9,6 +9,8 @@
  ; preserves asm files
  ; (ocamlopt_flags
  ;  (:standard -S))
+ (ocamlopt_flags
+  (:standard -g))
  (preprocess
   (pps ppx_jane))
  (public_name dscroll))

@@ -31,14 +31,12 @@ module Loop = struct
 end
 
 module Mode = struct
-  type t = Newline | Return of string | Sequence of string [@@deriving sexp]
+  type t = Newline | Return | Spaces [@@deriving sexp]
 
   let arg =
     Command.Arg_type.of_alist_exn ~accept_unique_prefixes:true
       ~case_sensitive:false ~list_values_in_help:false
-      [
-        ("newline", Newline); ("return", Return "\r"); ("sequence", Sequence " ");
-      ]
+      [ ("newline", Newline); ("return", Return); ("spaces", Spaces) ]
 end
 
 type cliflags = {
@@ -53,6 +51,11 @@ type cliflags = {
   suffix : string;
   width : int;
 }
+
+let dump msg =
+  let s = Gc.quick_stat () in
+  Printf.printf "%s: minor=%.0f promoted=%.0f major=%.0f\n" msg s.minor_words
+    s.promoted_words s.major_words
 
 let getfinaltext text endcap_char endcap_len width direction =
   let text_len =
@@ -101,8 +104,7 @@ let getfinaltext text endcap_char endcap_len width direction =
       Bytes.fill buf ~pos:0 ~len:ecl endcap_char;
       blit_text_list ~dst:buf text ecl;
       Bytes.blit ~src:buf ~src_pos:0 ~dst:buf ~dst_pos:halflen ~len:halflen);
-
-  Bytes.unsafe_to_string ~no_mutation_while_string_reachable:buf
+  buf
 
 let run text
     {
@@ -117,8 +119,10 @@ let run text
       suffix;
       width;
     } =
+  (* dump "after args"; *)
   let finaltext = getfinaltext text endcap_char endcap_len width direction in
-  let lentext = String.length finaltext in
+  (* dump "after init"; *)
+  let lentext = Bytes.length finaltext in
   let lenminuswidth = lentext - width in
   let halflen = lentext asr 1 in
   let ticks =
@@ -138,32 +142,36 @@ let run text
   in
   (* let delay = Time_float_unix.Span.of_int_ms speed in *)
   (* let initial_delay = float_of_int initial_pause /. 1000.0 in *)
-  let len = width in
-  let buf = finaltext in
-  let printxxx =
-    match output_mode with
-    | Newline -> fun () -> print_endline suffix
-    | Return str | Sequence str ->
-        fun () ->
-          print_string suffix;
-          print_string str;
-          Out_channel.flush stdout
+  let lastchar =
+    match output_mode with Newline -> '\n' | Return -> '\r' | Spaces -> ' '
   in
+  let preflen = String.length prefix in
+  let sufflen = String.length suffix in
+  let finalbuf = Bytes.create (preflen + width + sufflen + 1) in
+  Bytes.From_string.blit ~src:prefix ~src_pos:0 ~dst:finalbuf ~dst_pos:0
+    ~len:preflen;
+  Bytes.From_string.blit ~src:suffix ~src_pos:0 ~dst:finalbuf
+    ~dst_pos:(preflen + width) ~len:sufflen;
+  Bytes.set finalbuf (preflen + width + sufflen) lastchar;
+
   let rec loop ticks frame =
+    if frame = 1 then Loop.unsafe_long_nanosleep initial_pause else ();
     if ticks <= 0 then
       let _ = match output_mode with Newline -> () | _ -> print_endline "" in
       (* exit 0 *)
       ()
-    else begin
+    (* dump "after run"; *)
+      else begin
       let pos = getframe frame in
-      (* print_string (string_of_int pos ^ " " ^ string_of_int ticks ^ "  "); *)
-      if frame = 1 then Loop.unsafe_long_nanosleep initial_pause;
-      (* let op = getnextoutput finaltext pos width in *)
-      print_string prefix;
-      Out_channel.output_substring stdout ~buf ~pos ~len;
-      printxxx ();
+
+      Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
+        ~len:width;
+      Out_channel.output_bytes stdout finalbuf;
+
+      Out_channel.flush stdout;
+
       (* Time_float_unix.pause delay; *)
-      Loop.unsafe_long_nanosleep speed;
+      (* Loop.unsafe_long_nanosleep speed; *)
       (loop [@tailcall]) (pred ticks) (succ frame)
     end
   in

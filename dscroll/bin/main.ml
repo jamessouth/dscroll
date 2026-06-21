@@ -65,7 +65,10 @@ let () =
        (let%map_open.Command text =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
-        fun () -> run text flags))
+        fun () ->
+          (* for i = 1 to 15000 do *)
+          run text flags
+        (* done *)))
 
 (* let () =
   let text = [ "mary had" ] in
@@ -93,3 +96,71 @@ let () =
 ├───────────┼──────────┼─────────┼────────────┤
 │ Optimized │  96.61ms │  23.00w │    100.00% │
 └───────────┴──────────┴─────────┴────────────┘ *)
+
+(* let () =
+  let s = Gc.quick_stat () in
+  Printf.printf
+    "minor_collections=%d major_collections=%d promoted_words=%f \
+     minor_words=%f major_words=%f\n"
+    s.minor_collections s.major_collections s.promoted_words s.minor_words
+    s.major_words *)
+
+(* % time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 90.46   10.742094           9   1100000           write
+  9.52    1.130571          11    100000           nanosleep
+  0.02    0.001872        1872         1           execve
+  0.01    0.000703           9        76           mmap
+  0.00    0.000081          20         4           mprotect
+  0.00    0.000061          20         3           openat
+  0.00    0.000047           7         6           brk
+  0.00    0.000035          35         1           munmap
+  0.00    0.000026          26         1           readlink
+  0.00    0.000025           8         3           fstat
+  0.00    0.000014           4         3         3 lseek
+  0.00    0.000013           6         2           read
+  0.00    0.000012           4         3           sigaltstack
+  0.00    0.000012          12         1           prlimit64
+  0.00    0.000012          12         1           getrandom
+  0.00    0.000011           3         3           close
+  0.00    0.000010          10         1           getcwd
+  0.00    0.000009           9         1           newfstatat
+  0.00    0.000005           5         1           rt_sigaction
+  0.00    0.000000           0         2           pread64
+  0.00    0.000000           0         1         1 access
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         1           set_tid_address
+  0.00    0.000000           0         1           set_robust_list
+  0.00    0.000000           0         1           rseq
+------ ----------- ----------- --------- --------- ----------------
+100.00   11.875613           9   1200118         4 total *)
+
+(* % time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 90.75    1.698869          10    165000           write
+  9.21    0.172400          11     15000           nanosleep
+  0.03    0.000539           7        76           mmap
+  0.00    0.000044          14         3           openat
+  0.00    0.000043          43         1           readlink
+  0.00    0.000039           9         4           mprotect
+  0.00    0.000028           9         3         3 lseek
+  0.00    0.000024          24         1         1 access
+  0.00    0.000023           3         6           brk
+  0.00    0.000020           6         3           fstat
+  0.00    0.000018           9         2           read
+  0.00    0.000016           5         3           close
+  0.00    0.000012          12         1           newfstatat
+  0.00    0.000011           5         2           pread64
+  0.00    0.000009           3         3           sigaltstack
+  0.00    0.000008           8         1           munmap
+  0.00    0.000006           6         1           rseq
+  0.00    0.000005           5         1           arch_prctl
+  0.00    0.000004           4         1           getcwd
+  0.00    0.000004           4         1           set_tid_address
+  0.00    0.000004           4         1           set_robust_list
+  0.00    0.000002           2         1           prlimit64
+  0.00    0.000002           2         1           getrandom
+  0.00    0.000001           1         1           rt_sigaction
+  0.00    0.000000           0         1           execve
+------ ----------- ----------- --------- --------- ----------------
+100.00    1.872131          10    180118         4 total *)
