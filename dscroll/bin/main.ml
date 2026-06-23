@@ -66,9 +66,9 @@ let () =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
         fun () ->
-          (* for i = 1 to 15000 do *)
-          run text flags
-        (* done *)))
+          for i = 1 to 15000 do
+            run text flags
+          done))
 
 (* let () =
   let text = [ "mary had" ] in
@@ -164,3 +164,30 @@ let () =
   0.00    0.000000           0         1           execve
 ------ ----------- ----------- --------- --------- ----------------
 100.00    1.872131          10    180118         4 total *)
+
+(* Samples: 12K of event 'cpu/cycles/Pu', Event count (approx.): 2731928503
+  Children      Self  Command   Shared O  Symbol
++    1.77%     0.93%  main.exe  main.exe  [.] Dscroll.loop_4613
+     0.53%     0.25%  main.exe  main.exe  [.] Dscroll.run_4588
+     0.43%     0.33%  main.exe  main.exe  [.] Dscroll.getframe_4606
+     0.35%     0.11%  main.exe  main.exe  [.] Dscroll.getfinaltext_3936
+     0.25%     0.18%  main.exe  main.exe  [.] Dscroll.blit_text_list_4328
+     0.08%     0.08%  main.exe  main.exe  [.] Dscroll.fun_4796 *)
+
+(* Samples: 18K of event 'cpu/cycles/Pu', Event count (approx.): 4710224922
+  Children      Self  Command   Shared O  Symbol
+     1.11%     0.90%  main.exe  main.exe  [.] Dscroll.loop_4613
+     0.26%     0.23%  main.exe  main.exe  [.] Dscroll.run_4588
+     0.22%     0.22%  main.exe  main.exe  [.] Dscroll.blit_text_list_4328
+     0.14%     0.14%  main.exe  main.exe  [.] Dscroll.getframe_4606
+     0.06%     0.03%  main.exe  main.exe  [.] Dscroll.getfinaltext_3936
+     0.04%     0.04%  main.exe  main.exe  [.] Dscroll.fun_4796 *)
+
+(* Samples: 16K of event 'cpu/cycles/Pu', Event count (approx.): 4485388381
+  Children      Self  Command   Shared O  Symbol
++    1.79%     0.93%  main.exe  main.exe  [.] Dscroll.loop_4613           
+     0.42%     0.13%  main.exe  main.exe  [.] Dscroll.run_4588               
+     0.35%     0.12%  main.exe  main.exe  [.] Dscroll.getfinaltext_3936   
+     0.29%     0.24%  main.exe  main.exe  [.] Dscroll.getframe_4606       
+     0.24%     0.17%  main.exe  main.exe  [.] Dscroll.blit_text_list_4328 
+     0.04%     0.04%  main.exe  main.exe  [.] Dscroll.fun_4796     *)

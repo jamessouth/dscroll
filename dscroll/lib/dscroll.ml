@@ -131,7 +131,7 @@ let run text
     | Left -> succ (halflen * cycles)
     | Right -> succ (halflen * cycles)
   in
-  let getframe frame =
+  (* let getframe frame =
     match direction with
     | Direction.Bounce ->
         if lenminuswidth = 0 then 0
@@ -139,7 +139,7 @@ let run text
           lenminuswidth - abs ((frame % (lenminuswidth lsl 1)) - lenminuswidth)
     | Left -> frame % halflen
     | Right -> lenminuswidth - (frame % halflen)
-  in
+  in *)
   (* let delay = Time_float_unix.Span.of_int_ms speed in *)
   (* let initial_delay = float_of_int initial_pause /. 1000.0 in *)
   let lastchar =
@@ -153,7 +153,8 @@ let run text
   Bytes.From_string.blit ~src:suffix ~src_pos:0 ~dst:finalbuf
     ~dst_pos:(preflen + width) ~len:sufflen;
   Bytes.set finalbuf (preflen + width + sufflen) lastchar;
-
+  let hh = match direction with Direction.Bounce | Left -> 1 | Right -> -1 in
+  let gg = ref hh in
   let rec loop ticks frame =
     if frame = 1 then Loop.unsafe_long_nanosleep initial_pause else ();
     if ticks <= 0 then
@@ -162,17 +163,33 @@ let run text
       ()
     (* dump "after run"; *)
       else begin
-      let pos = getframe frame in
+      (* let pos = getframe frame in *)
+      let frame =
+        match direction with
+        | Direction.Bounce -> frame
+        | Left -> if frame = halflen then 0 else frame
+        | Right ->
+            if frame = lenminuswidth - halflen then lenminuswidth else frame
+      in
+      (* printf "%2d " frame; *)
 
-      Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
+      Bytes.blit ~src:finaltext ~src_pos:frame ~dst:finalbuf ~dst_pos:preflen
         ~len:width;
       Out_channel.output_bytes stdout finalbuf;
 
       Out_channel.flush stdout;
 
+      gg :=
+        if Direction.equal direction Bounce then
+          if frame = 0 then 1 else if frame = lenminuswidth then -1 else !gg
+        else !gg;
+
       (* Time_float_unix.pause delay; *)
       (* Loop.unsafe_long_nanosleep speed; *)
-      (loop [@tailcall]) (pred ticks) (succ frame)
+      (loop [@tailcall]) (pred ticks) (frame + !gg)
     end
   in
-  loop ticks 0
+  let initf =
+    match direction with Direction.Bounce | Left -> 0 | Right -> lenminuswidth
+  in
+  loop ticks initf
