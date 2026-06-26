@@ -52,11 +52,6 @@ type cliflags = {
   width : int;
 }
 
-let dump msg =
-  let s = Gc.quick_stat () in
-  Printf.printf "%s: minor=%.0f promoted=%.0f major=%.0f\n" msg s.minor_words
-    s.promoted_words s.major_words
-
 let getfinaltext text endcap_char endcap_len width direction =
   let text_len =
     List.fold text ~init:(-1) ~f:(fun acc s -> acc + String.length s + 1)
@@ -106,6 +101,8 @@ let getfinaltext text endcap_char endcap_len width direction =
       Bytes.blit ~src:buf ~src_pos:0 ~dst:buf ~dst_pos:halflen ~len:halflen);
   buf
 
+type position_state = { pos : int; dir : int }
+
 let run text
     {
       cycles;
@@ -119,9 +116,7 @@ let run text
       suffix;
       width;
     } =
-  (* dump "after args"; *)
   let finaltext = getfinaltext text endcap_char endcap_len width direction in
-  (* dump "after init"; *)
   let lentext = Bytes.length finaltext in
   let lenminuswidth = lentext - width in
   let halflen = lentext asr 1 in
@@ -131,16 +126,8 @@ let run text
     | Left -> succ (halflen * cycles)
     | Right -> succ (halflen * cycles)
   in
-  (* let getframe frame =
-    match direction with
-    | Direction.Bounce ->
-        if lenminuswidth = 0 then 0
-        else
-          lenminuswidth - abs ((frame % (lenminuswidth lsl 1)) - lenminuswidth)
-    | Left -> frame % halflen
-    | Right -> lenminuswidth - (frame % halflen)
-  in *)
-  (* let delay = Time_float_unix.Span.of_int_ms speed in *)
+
+  let delay = Time_float_unix.Span.of_int_ms speed in
   (* let initial_delay = float_of_int initial_pause /. 1000.0 in *)
   let lastchar =
     match output_mode with Newline -> '\n' | Return -> '\r' | Spaces -> ' '
@@ -153,43 +140,47 @@ let run text
   Bytes.From_string.blit ~src:suffix ~src_pos:0 ~dst:finalbuf
     ~dst_pos:(preflen + width) ~len:sufflen;
   Bytes.set finalbuf (preflen + width + sufflen) lastchar;
-  let hh = match direction with Direction.Bounce | Left -> 1 | Right -> -1 in
-  let gg = ref hh in
-  let rec loop ticks frame =
-    if frame = 1 then Loop.unsafe_long_nanosleep initial_pause else ();
+
+  let next state =
+    let pos = state.pos + state.dir in
+    match direction with
+    | Direction.Bounce ->
+        if pos <= 0 then { pos = 0; dir = 1 }
+        else if pos >= lenminuswidth then { pos = lenminuswidth; dir = -1 }
+        else { pos; dir = state.dir }
+    | Left ->
+        if pos = halflen then { pos = 0; dir = 1 } else { pos; dir = state.dir }
+    | Right ->
+        if pos = lenminuswidth - halflen then { pos = lenminuswidth; dir = -1 }
+        else { pos; dir = -1 }
+  in
+  let rec loop ticks st =
+    if st.pos = 1 then Loop.unsafe_long_nanosleep initial_pause else ();
     if ticks <= 0 then
       let _ = match output_mode with Newline -> () | _ -> print_endline "" in
       (* exit 0 *)
       ()
-    (* dump "after run"; *)
-      else begin
-      (* let pos = getframe frame in *)
-      let frame =
-        match direction with
-        | Direction.Bounce -> frame
-        | Left -> if frame = halflen then 0 else frame
-        | Right ->
-            if frame = lenminuswidth - halflen then lenminuswidth else frame
-      in
+    else begin
       (* printf "%2d " frame; *)
-
-      Bytes.blit ~src:finaltext ~src_pos:frame ~dst:finalbuf ~dst_pos:preflen
+      Bytes.blit ~src:finaltext ~src_pos:st.pos ~dst:finalbuf ~dst_pos:preflen
         ~len:width;
       Out_channel.output_bytes stdout finalbuf;
 
       Out_channel.flush stdout;
 
-      gg :=
-        if Direction.equal direction Bounce then
-          if frame = 0 then 1 else if frame = lenminuswidth then -1 else !gg
-        else !gg;
+      let ns = next st in
 
-      (* Time_float_unix.pause delay; *)
+      Time_float_unix.pause delay;
       (* Loop.unsafe_long_nanosleep speed; *)
-      (loop [@tailcall]) (pred ticks) (frame + !gg)
+      (loop [@tailcall]) (pred ticks) ns
     end
   in
-  let initf =
-    match direction with Direction.Bounce | Left -> 0 | Right -> lenminuswidth
+
+  (* if initial_pause = 0 then  *)
+  let init =
+    match direction with
+    | Direction.Bounce -> { pos = 0; dir = 1 }
+    | Left -> { pos = 0; dir = 1 }
+    | Right -> { pos = lenminuswidth; dir = -1 }
   in
-  loop ticks initf
+  loop ticks init

@@ -66,7 +66,7 @@ let () =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
         fun () ->
-          for i = 1 to 15000 do
+          for i = 1 to 1 do
             run text flags
           done))
 
@@ -174,6 +174,17 @@ let () =
      0.25%     0.18%  main.exe  main.exe  [.] Dscroll.blit_text_list_4328
      0.08%     0.08%  main.exe  main.exe  [.] Dscroll.fun_4796 *)
 
+(* Samples: 16K of event 'cpu/cycles/Pu', Event count (approx.): 3257564109
+  Children      Self  Command   Shared O  Symbol
+     1.32%     1.32%  main.exe  main.exe  [.] Dscroll.loop_4613
+     0.32%     0.32%  main.exe  main.exe  [.] Dscroll.nff_4610
+     0.30%     0.30%  main.exe  main.exe  [.] Dscroll.run_4588
+     0.28%     0.28%  main.exe  main.exe  [.] Dscroll.blit_text_list_4328
+     0.13%     0.13%  main.exe  main.exe  [.] Dscroll.getfinaltext_3936
+     0.07%     0.07%  main.exe  main.exe  [.] Dscroll.fun_4801 *)
+
+(* --------------------------------------- *)
+
 (* Samples: 18K of event 'cpu/cycles/Pu', Event count (approx.): 4710224922
   Children      Self  Command   Shared O  Symbol
      1.11%     0.90%  main.exe  main.exe  [.] Dscroll.loop_4613
@@ -183,6 +194,15 @@ let () =
      0.06%     0.03%  main.exe  main.exe  [.] Dscroll.getfinaltext_3936
      0.04%     0.04%  main.exe  main.exe  [.] Dscroll.fun_4796 *)
 
+(* Samples: 23K of event 'cpu/cycles/Pu', Event count (approx.): 5322417423
+  Children      Self  Command   Shared O  Symbol
+     1.08%     1.02%  main.exe  main.exe  [.] Dscroll.loop_4613
+     0.22%     0.21%  main.exe  main.exe  [.] Dscroll.run_4588
+     0.16%     0.16%  main.exe  main.exe  [.] Dscroll.blit_text_list_4328
+     0.14%     0.14%  main.exe  main.exe  [.] Dscroll.nff_4610
+     0.08%     0.08%  main.exe  main.exe  [.] Dscroll.fun_4801
+     0.07%     0.05%  main.exe  main.exe  [.] Dscroll.getfinaltext_3936 *)
+
 (* Samples: 16K of event 'cpu/cycles/Pu', Event count (approx.): 4485388381
   Children      Self  Command   Shared O  Symbol
 +    1.79%     0.93%  main.exe  main.exe  [.] Dscroll.loop_4613           
@@ -191,3 +211,54 @@ let () =
      0.29%     0.24%  main.exe  main.exe  [.] Dscroll.getframe_4606       
      0.24%     0.17%  main.exe  main.exe  [.] Dscroll.blit_text_list_4328 
      0.04%     0.04%  main.exe  main.exe  [.] Dscroll.fun_4796     *)
+
+(* Samples: 22K of event 'cpu/cycles/Pu', Event count (approx.): 5247013487
+  Children      Self  Command   Shared O  Symbol
+     1.26%     1.11%  main.exe  main.exe  [.] Dscroll.loop_4613
+     0.25%     0.17%  main.exe  main.exe  [.] Dscroll.run_4588
+     0.21%     0.21%  main.exe  main.exe  [.] Dscroll.nff_4610
+     0.19%     0.17%  main.exe  main.exe  [.] Dscroll.blit_text_list_4328
+     0.15%     0.08%  main.exe  main.exe  [.] Dscroll.getfinaltext_3936
+     0.07%     0.07%  main.exe  main.exe  [.] Dscroll.fun_4801 *)
+
+(* left *)
+(* 0  context-switches:u          #  0.0 cs/sec  cs_per_second 
+0  cpu-migrations:u            #  0.0 migrations/sec  migrations_per_second
+2,363  page-faults:u           #   1648.7 faults/sec  page_faults_per_second
+1,433.29 msec task-clock:u     #  0.5 CPUs  CPUs_utilized   
+560,190  branch-misses:u       #  0.4 %  branch_miss_rate (69.25%)
+131,787,818  branches:u        # 91.9 M/sec  branch_frequency (68.83%)
+343,737,399  cpu-cycles:u      #  0.2 GHz  cycles_frequency   (63.28%)
+548,247,401  instructions:u    #  1.6 instructions  insn_per_cycle  (62.91%)
+
+   3.021963600 seconds time elapsed
+   0.676858000 seconds user
+   0.681318000 seconds sys *)
+
+(* bounce *)
+(* 0  context-switches:u       #  0.0 cs/sec  cs_per_second 
+0  cpu-migrations:u            #  0.0 migrations/sec  migrations_per_second
+1,849  page-faults:u           #   1670.4 faults/sec  page_faults_per_second
+1,106.92 msec task-clock:u     #  0.4 CPUs  CPUs_utilized   
+569,486  branch-misses:u       #  0.8 %  branch_miss_rate (61.23%)
+66,021,959  branches:u         # 59.6 M/sec  branch_frequency (71.41%)
+200,046,341  cpu-cycles:u      #  0.2 GHz  cycles_frequency   (60.95%)
+296,084,456  instructions:u    #  1.5 instructions  insn_per_cycle  (60.37%)
+
+2.853682142 seconds time elapsed
+0.361082000 seconds user
+0.681369000 seconds sys *)
+
+(* right *)
+(* 0  context-switches:u        #  0.0 cs/sec  cs_per_second 
+0  cpu-migrations:u             #  0.0 migrations/sec  migrations_per_second
+2,363  page-faults:u            #   1676.8 faults/sec  page_faults_per_second
+1,409.25 msec task-clock:u      #  0.5 CPUs  CPUs_utilized   
+476,591  branch-misses:u        #  0.4 %  branch_miss_rate (66.97%)
+132,450,994  branches:u         # 94.0 M/sec  branch_frequency (69.44%)
+338,148,809  cpu-cycles:u       #  0.2 GHz  cycles_frequency   (66.90%)
+547,778,277  instructions:u     #  1.6 instructions  insn_per_cycle  (63.74%)
+
+       3.086884819 seconds time elapsed
+       0.724064000 seconds user
+       0.613753000 seconds sys *)
