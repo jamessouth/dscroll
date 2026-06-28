@@ -26,7 +26,7 @@ module Ints = struct
 end
 
 module Loop = struct
-  external unsafe_long_nanosleep : int -> unit = "caml_long_nanosleep"
+  external caml_clock_nanosleep : int -> unit = "caml_clock_nanosleep"
   [@@noalloc]
 end
 
@@ -51,6 +51,8 @@ type cliflags = {
   suffix : string;
   width : int;
 }
+
+type position_state = { pos : int; dir : int }
 
 let getfinaltext text endcap_char endcap_len width direction =
   let text_len =
@@ -101,8 +103,6 @@ let getfinaltext text endcap_char endcap_len width direction =
       Bytes.blit ~src:buf ~src_pos:0 ~dst:buf ~dst_pos:halflen ~len:halflen);
   buf
 
-type position_state = { pos : int; dir : int }
-
 let run text
     {
       cycles;
@@ -127,8 +127,6 @@ let run text
     | Right -> succ (halflen * cycles)
   in
 
-  let delay = Time_float_unix.Span.of_int_ms speed in
-  (* let initial_delay = float_of_int initial_pause /. 1000.0 in *)
   let lastchar =
     match output_mode with Newline -> '\n' | Return -> '\r' | Spaces -> ' '
   in
@@ -155,7 +153,7 @@ let run text
         else { pos; dir = -1 }
   in
   let rec loop ticks st =
-    if st.pos = 1 then Loop.unsafe_long_nanosleep initial_pause else ();
+    (* if st.pos = 1 then Loop.unsafe_nanosleep initial_pause else (); *)
     if ticks <= 0 then
       let _ = match output_mode with Newline -> () | _ -> print_endline "" in
       (* exit 0 *)
@@ -170,8 +168,7 @@ let run text
 
       let ns = next st in
 
-      Time_float_unix.pause delay;
-      (* Loop.unsafe_long_nanosleep speed; *)
+      Loop.caml_clock_nanosleep speed;
       (loop [@tailcall]) (pred ticks) ns
     end
   in
