@@ -141,13 +141,14 @@ let run text
         Out_channel.output_bytes stdout finalbuf;
         Out_channel.flush stdout;
 
-        if !pos <= 0 then (
+        let ipos = !pos + !dir in
+        if ipos <= 0 then (
           pos := 0;
           dir := 1)
-        else if !pos >= lenminuswidth then (
+        else if ipos >= lenminuswidth then (
           pos := lenminuswidth;
           dir := -1)
-        else pos := !pos + !dir;
+        else pos := ipos;
 
         Loop.caml_clock_nanosleep speed
       done
@@ -159,7 +160,8 @@ let run text
         Out_channel.output_bytes stdout finalbuf;
         Out_channel.flush stdout;
 
-        if !pos = halflen then pos := 0 else pos := !pos + 1;
+        let ipos = succ !pos in
+        if ipos >= halflen then pos := 0 else pos := ipos;
 
         Loop.caml_clock_nanosleep speed
       done
@@ -171,8 +173,9 @@ let run text
         Out_channel.output_bytes stdout finalbuf;
         Out_channel.flush stdout;
 
-        if !pos = lenminuswidth - halflen then pos := lenminuswidth
-        else pos := !pos - 1;
+        let ipos = pred !pos in
+        if ipos <= lenminuswidth - halflen then pos := lenminuswidth
+        else pos := ipos;
 
         Loop.caml_clock_nanosleep speed
       done;

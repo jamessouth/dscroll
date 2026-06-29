@@ -7,14 +7,14 @@ __asm__(
 "    push    %r11\n"
 "    cqo\n"
 "    mov     $1000000000, %rcx\n"
-"    idiv    %rcx\n"
-"    push    %rdx      
-"    push    %rax      
-"    mov     $230, %rax
-"    mov     $1, %rdi  
-"    xor     %rsi, %rsi
-"    mov     %rsp, %rdx
-"    xor     %r10, %r10
+"    div     %rcx\n"
+"    push    %rdx\n"   
+"    push    %rax\n"
+"    mov     $230, %rax\n"
+"    mov     $1, %rdi\n"
+"    xor     %rsi, %rsi\n"
+"    mov     %rsp, %rdx\n"
+"    xor     %r10, %r10\n"
 "    syscall\n"
 "    add     $16, %rsp\n"
 "    pop     %r11\n"
