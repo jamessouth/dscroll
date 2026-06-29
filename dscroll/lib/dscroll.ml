@@ -52,8 +52,6 @@ type cliflags = {
   width : int;
 }
 
-type position_state = { pos : int; dir : int }
-
 let getfinaltext text endcap_char endcap_len width direction =
   let text_len =
     List.fold text ~init:(-1) ~f:(fun acc s -> acc + String.length s + 1)
@@ -120,12 +118,6 @@ let run text
   let lentext = Bytes.length finaltext in
   let lenminuswidth = lentext - width in
   let halflen = lentext asr 1 in
-  let ticks =
-    match direction with
-    | Direction.Bounce -> succ ((lenminuswidth * cycles) lsl 1)
-    | Left -> succ (halflen * cycles)
-    | Right -> succ (halflen * cycles)
-  in
 
   let lastchar =
     match output_mode with Newline -> '\n' | Return -> '\r' | Spaces -> ' '
@@ -139,45 +131,52 @@ let run text
     ~dst_pos:(preflen + width) ~len:sufflen;
   Bytes.set finalbuf (preflen + width + sufflen) lastchar;
 
-  let next state =
-    let pos = state.pos + state.dir in
-    match direction with
-    | Direction.Bounce ->
-        if pos <= 0 then { pos = 0; dir = 1 }
-        else if pos >= lenminuswidth then { pos = lenminuswidth; dir = -1 }
-        else { pos; dir = state.dir }
-    | Left ->
-        if pos = halflen then { pos = 0; dir = 1 } else { pos; dir = state.dir }
-    | Right ->
-        if pos = lenminuswidth - halflen then { pos = lenminuswidth; dir = -1 }
-        else { pos; dir = -1 }
-  in
-  let rec loop ticks st =
-    (* if st.pos = 1 then Loop.unsafe_nanosleep initial_pause else (); *)
-    if ticks <= 0 then
-      let _ = match output_mode with Newline -> () | _ -> print_endline "" in
-      (* exit 0 *)
-      ()
-    else begin
-      (* printf "%2d " frame; *)
-      Bytes.blit ~src:finaltext ~src_pos:st.pos ~dst:finalbuf ~dst_pos:preflen
-        ~len:width;
-      Out_channel.output_bytes stdout finalbuf;
+  match direction with
+  | Direction.Bounce ->
+      let pos = ref 0 in
+      let dir = ref 1 in
+      for _ = 1 to succ ((lenminuswidth * cycles) lsl 1) do
+        Bytes.blit ~src:finaltext ~src_pos:!pos ~dst:finalbuf ~dst_pos:preflen
+          ~len:width;
+        Out_channel.output_bytes stdout finalbuf;
+        Out_channel.flush stdout;
 
-      Out_channel.flush stdout;
+        if !pos <= 0 then (
+          pos := 0;
+          dir := 1)
+        else if !pos >= lenminuswidth then (
+          pos := lenminuswidth;
+          dir := -1)
+        else pos := !pos + !dir;
 
-      let ns = next st in
+        Loop.caml_clock_nanosleep speed
+      done
+  | Left ->
+      let pos = ref 0 in
+      for _ = 1 to succ (halflen * cycles) do
+        Bytes.blit ~src:finaltext ~src_pos:!pos ~dst:finalbuf ~dst_pos:preflen
+          ~len:width;
+        Out_channel.output_bytes stdout finalbuf;
+        Out_channel.flush stdout;
 
-      Loop.caml_clock_nanosleep speed;
-      (loop [@tailcall]) (pred ticks) ns
-    end
-  in
+        if !pos = halflen then pos := 0 else pos := !pos + 1;
 
-  (* if initial_pause = 0 then  *)
-  let init =
-    match direction with
-    | Direction.Bounce -> { pos = 0; dir = 1 }
-    | Left -> { pos = 0; dir = 1 }
-    | Right -> { pos = lenminuswidth; dir = -1 }
-  in
-  loop ticks init
+        Loop.caml_clock_nanosleep speed
+      done
+  | Right -> (
+      let pos = ref lenminuswidth in
+      for _ = 1 to succ (halflen * cycles) do
+        Bytes.blit ~src:finaltext ~src_pos:!pos ~dst:finalbuf ~dst_pos:preflen
+          ~len:width;
+        Out_channel.output_bytes stdout finalbuf;
+        Out_channel.flush stdout;
+
+        if !pos = lenminuswidth - halflen then pos := lenminuswidth
+        else pos := !pos - 1;
+
+        Loop.caml_clock_nanosleep speed
+      done;
+
+      match output_mode with Newline -> () | _ -> print_endline "")
+
+(* if initial_pause = 0 then  *)
