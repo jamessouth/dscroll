@@ -124,7 +124,7 @@ let run text
   in
   let preflen = String.length prefix in
   let sufflen = String.length suffix in
-  let finalbuf = Bytes.create (preflen + width + sufflen + 1) in
+  let finalbuf = Bytes.create (succ preflen + width + sufflen) in
   Bytes.From_string.blit ~src:prefix ~src_pos:0 ~dst:finalbuf ~dst_pos:0
     ~len:preflen;
   Bytes.From_string.blit ~src:suffix ~src_pos:0 ~dst:finalbuf
@@ -135,7 +135,8 @@ let run text
   | Direction.Bounce ->
       let pos = ref 0 in
       let dir = ref 1 in
-      for _ = 1 to succ ((lenminuswidth * cycles) lsl 1) do
+      let ticks = succ ((lenminuswidth * cycles) lsl 1) in
+      for _ = 1 to ticks do
         Bytes.blit ~src:finaltext ~src_pos:!pos ~dst:finalbuf ~dst_pos:preflen
           ~len:width;
         Out_channel.output_bytes stdout finalbuf;
@@ -154,7 +155,8 @@ let run text
       done
   | Left ->
       let pos = ref 0 in
-      for _ = 1 to succ (halflen * cycles) do
+      let ticks = succ (halflen * cycles) in
+      for _ = 1 to ticks do
         Bytes.blit ~src:finaltext ~src_pos:!pos ~dst:finalbuf ~dst_pos:preflen
           ~len:width;
         Out_channel.output_bytes stdout finalbuf;
@@ -167,7 +169,8 @@ let run text
       done
   | Right -> (
       let pos = ref lenminuswidth in
-      for _ = 1 to succ (halflen * cycles) do
+      let ticks = succ (halflen * cycles) in
+      for _ = 1 to ticks do
         Bytes.blit ~src:finaltext ~src_pos:!pos ~dst:finalbuf ~dst_pos:preflen
           ~len:width;
         Out_channel.output_bytes stdout finalbuf;
