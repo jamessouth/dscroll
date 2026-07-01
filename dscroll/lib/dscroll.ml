@@ -39,6 +39,11 @@ module Mode = struct
       [ ("newline", Newline); ("return", Return); ("spaces", Spaces) ]
 end
 
+let dump msg =
+  let s = Gc.quick_stat () in
+  Printf.printf "%s: minor=%.0f promoted=%.0f major=%.0f\n" msg s.minor_words
+    s.promoted_words s.major_words
+
 type cliflags = {
   cycles : int;
   direction : Direction.t;
@@ -133,29 +138,40 @@ let run text
 
   match direction with
   | Direction.Bounce ->
-      let pos = ref 0 in
-      let dir = ref 1 in
       let ticks = succ ((lenminuswidth * cycles) lsl 1) in
-      for _ = 1 to ticks do
-        Bytes.blit ~src:finaltext ~src_pos:!pos ~dst:finalbuf ~dst_pos:preflen
-          ~len:width;
-        Out_channel.output_bytes stdout finalbuf;
-        Out_channel.flush stdout;
 
-        let ipos = !pos + !dir in
-        if ipos <= 0 then (
-          pos := 0;
-          dir := 1)
-        else if ipos >= lenminuswidth then (
-          pos := lenminuswidth;
-          dir := -1)
-        else pos := ipos;
+      let rec loop ticks pos dir =
+        if ticks <= 0 then
+          let _ =
+            match output_mode with Newline -> () | _ -> print_endline ""
+          in
+          ()
+        else begin
+          Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
+            ~len:width;
+          Out_channel.output_bytes stdout finalbuf;
+          Out_channel.flush stdout;
 
-        Loop.caml_clock_nanosleep speed
-      done
+          let ipos = pos + dir in
+          let pos =
+            if ipos <= 0 then 0
+            else if ipos >= lenminuswidth then lenminuswidth
+            else ipos
+          in
+
+          let dir =
+            if ipos <= 0 then 1 else if ipos >= lenminuswidth then -1 else dir
+          in
+
+          (* Loop.caml_clock_nanosleep speed; *)
+          (loop [@tailcall]) (pred ticks) pos dir
+        end
+      in
+      loop ticks 0 1
   | Left ->
       let pos = ref 0 in
       let ticks = succ (halflen * cycles) in
+      dump "start";
       for _ = 1 to ticks do
         Bytes.blit ~src:finaltext ~src_pos:!pos ~dst:finalbuf ~dst_pos:preflen
           ~len:width;
@@ -163,10 +179,10 @@ let run text
         Out_channel.flush stdout;
 
         let ipos = succ !pos in
-        if ipos >= halflen then pos := 0 else pos := ipos;
-
-        Loop.caml_clock_nanosleep speed
-      done
+        if ipos >= halflen then pos := 0 else pos := ipos
+        (* Loop.caml_clock_nanosleep speed *)
+      done;
+      dump "end"
   | Right -> (
       let pos = ref lenminuswidth in
       let ticks = succ (halflen * cycles) in
