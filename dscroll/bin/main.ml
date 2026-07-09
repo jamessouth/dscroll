@@ -67,9 +67,9 @@ let () =
         and flags in
         fun () -> run text flags))
 
-let () =
+(* let () =
   Gc.print_stat stderr;
-  print_endline "---"
+  print_endline "---" *)
 
 (* let () =
   let text = [ "mary had" ] in

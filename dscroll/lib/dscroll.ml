@@ -25,7 +25,7 @@ module Ints = struct
   let twoplus = Command.Arg_type.create (getint ~min:2)
 end
 
-module Loop = struct
+module Sleep = struct
   external caml_clock_nanosleep : int -> unit = "caml_clock_nanosleep"
   [@@noalloc]
 end
@@ -116,78 +116,91 @@ let run text
     } =
   let finaltext = getfinaltext text endcap_char endcap_len width direction in
   let lentext = Bytes.length finaltext in
-  let lenminuswidth = lentext - width in
-  let halflen = lentext asr 1 in
-  let ticks =
-    match direction with
-    | Direction.Bounce -> succ ((lenminuswidth * cycles) lsl 1)
-    | Left -> succ (halflen * cycles)
-    | Right -> succ (halflen * cycles)
-  in
-  let getframe frame =
-    match direction with
-    | Direction.Bounce ->
-        if lenminuswidth = 0 then 0
-        else
-          lenminuswidth - abs ((frame % (lenminuswidth lsl 1)) - lenminuswidth)
-    | Left -> frame % halflen
-    | Right -> lenminuswidth - (frame % halflen)
-  in
   (* cli help info doesn't look right so these chars are here *)
   let lastchar =
     match output_mode with Newline -> '\n' | Return -> '\r' | Spaces -> ' '
   in
   let preflen = String.length prefix in
   let sufflen = String.length suffix in
-  let finalbuf = Bytes.create (preflen + width + sufflen + 1) in
+  let finalbuf = Bytes.create (succ preflen + width + sufflen) in
   Bytes.From_string.blit ~src:prefix ~src_pos:0 ~dst:finalbuf ~dst_pos:0
     ~len:preflen;
   Bytes.From_string.blit ~src:suffix ~src_pos:0 ~dst:finalbuf
     ~dst_pos:(preflen + width) ~len:sufflen;
   Bytes.set finalbuf (preflen + width + sufflen) lastchar;
+  begin match direction with
+  | Direction.Bounce ->
+      let lenminuswidth = lentext - width in
+      let ticks = succ ((lenminuswidth * cycles) lsl 1) in
+      let rec loop ticks pos dir =
+        if ticks <= 0 then ()
+        else begin
+          Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
+            ~len:width;
+          Out_channel.output_bytes stdout finalbuf;
+          Out_channel.flush stdout;
 
-  let rec loop ticks frame =
-    (* if frame = 1 then Loop.caml_clock_nanosleep initial_pause else (); *)
-    if ticks <= 0 then
-      let _ = match output_mode with Newline -> () | _ -> print_endline "" in
-      ()
-    else begin
-      Bytes.blit ~src:finaltext ~src_pos:(getframe frame) ~dst:finalbuf
-        ~dst_pos:preflen ~len:width;
-      Out_channel.output_bytes stdout finalbuf;
-      Out_channel.flush stdout;
+          let ipos = pos + dir in
+          let npos =
+            if ipos <= 0 then 0
+            else if ipos >= lenminuswidth then lenminuswidth
+            else ipos
+          in
+          let ndir =
+            if ipos <= 0 then 1 else if ipos >= lenminuswidth then -1 else dir
+          in
 
-      Loop.caml_clock_nanosleep speed;
-      (loop [@tailcall]) (pred ticks) (succ frame)
-    end
-  in
-  loop ticks 0
+          Sleep.caml_clock_nanosleep speed;
+          (loop [@tailcall]) (pred ticks) npos ndir
+        end
+      in
+      loop ticks 0 1
+  | Left ->
+      let halflen = lentext asr 1 in
 
-(* Explicit state track loop: tracks current position 'pos' and a step delta 'delta' *)
-(* let rec loop ticks pos delta =
-  if ticks <= 0 then
-    let _ = match output_mode with Newline -> () | _ -> print_endline "" in
-    ()
-  else begin
-    Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen ~len:width;
-    Out_channel.output_bytes stdout finalbuf;
-    Out_channel.flush stdout;
-    Loop.caml_clock_nanosleep speed;
+      let ticks = succ (halflen * cycles) in
+      let rec loop ticks pos =
+        if ticks <= 0 then ()
+        else begin
+          Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
+            ~len:width;
+          Out_channel.output_bytes stdout finalbuf;
+          Out_channel.flush stdout;
 
-    (* Pre-calculate your bounce positions in 1 cycle without using % or abs *)
-    let next_pos = pos + delta in
-    let next_delta = 
-      if lenminuswidth = 0 then 0
-      else if next_pos >= lenminuswidth then -1
-      else if next_pos <= 0 then 1
-      else delta
-    in
-    (loop [@tailcall]) (pred ticks) next_pos next_delta
-  end
-in
-(* Initialize loop: if left/right scroll, use specialized loop or step wraps *)
-loop ticks 0 1 *)
+          let ipos = succ pos in
+          let npos = if ipos >= halflen then 0 else ipos in
 
-(* Fix B: Unbox and Isolate Variant LayoutsInside your loop, you read output_mode inside a conditional match check. In OCaml, unless a variant is heavily optimized by the compiler, matching a global variant configuration block can pull pointers from the heap. Because your terminal loop has a fixed output_mode, resolve that match statement outside the recursive loop block, or pass an unboxed primitive flag (like a boolean or integer mapping) to avoid memory lookups inside the hot track. *)
+          Sleep.caml_clock_nanosleep speed;
+          (loop [@tailcall]) (pred ticks) npos
+        end
+      in
+      loop ticks 0
+  | Right ->
+      let lenminuswidth = lentext - width in
+      let halflen = lentext asr 1 in
+      let minpos = lenminuswidth - halflen in
+      let ticks = succ (halflen * cycles) in
+      let rec loop ticks pos =
+        if ticks <= 0 then ()
+        else begin
+          Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
+            ~len:width;
+          Out_channel.output_bytes stdout finalbuf;
+          Out_channel.flush stdout;
+
+          let ipos = pred pos in
+          let npos = if ipos <= minpos then lenminuswidth else ipos in
+
+          Sleep.caml_clock_nanosleep speed;
+          (loop [@tailcall]) (pred ticks) npos
+        end
+      in
+      loop ticks lenminuswidth
+  end;
+  match output_mode with
+  | Newline -> ()
+  | _ ->
+      Out_channel.output_byte stdout 10;
+      Out_channel.flush stdout
 
 (* Fix C: Group Writes Using Buffered PipelinesInstead of executing an explicit kernel flush operation on every individual character shift (Out_channel.flush stdout), let the OCaml standard library cache output data tables natively. Only call flush periodically or allow the OS shell pipe to consume bytes in batches. This minimizes kernel context switching transitions, dropping your context thrashing instantly. *)
