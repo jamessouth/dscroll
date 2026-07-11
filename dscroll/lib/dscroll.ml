@@ -52,10 +52,27 @@ type cliflags = {
   width : int;
 }
 
+let rec gettextlen acc = function
+  | [] -> acc
+  | str :: rest -> gettextlen (acc + String.length str + 1) rest
+
+let gtl2 text =
+  List.fold text ~init:(-1) ~f:(fun acc s -> acc + String.length s + 1)
+
+let rec blit_text_list ~dst text pos =
+  match text with
+  | [] -> ()
+  | [ s ] ->
+      let len = String.length s in
+      Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len
+  | s :: ts ->
+      let len = String.length s in
+      Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len;
+      Bytes.set dst (pos + len) ' ';
+      blit_text_list ~dst ts (pos + len + 1)
+
 let getfinaltext text endcap_char endcap_len width direction =
-  let text_len =
-    List.fold text ~init:(-1) ~f:(fun acc s -> acc + String.length s + 1)
-  in
+  let text_len = gettextlen (-1) text in
   let width_minus_text_len = width - text_len in
 
   let ecl =
@@ -72,18 +89,6 @@ let getfinaltext text endcap_char endcap_len width direction =
     | Left | Right -> halflen lsl 1
   in
 
-  let rec blit_text_list ~dst text pos =
-    match text with
-    | [] -> ()
-    | [ s ] ->
-        let len = String.length s in
-        Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len
-    | s :: ts ->
-        let len = String.length s in
-        Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len;
-        Bytes.set dst (pos + len) ' ';
-        blit_text_list ~dst ts (pos + len + 1)
-  in
   let buf = Bytes.create total_len in
 
   (match direction with
@@ -120,24 +125,21 @@ let run text
   let lastchar =
     match output_mode with Newline -> '\n' | Return -> '\r' | Spaces -> ' '
   in
-  let preflen = String.length prefix in
-  let sufflen = String.length suffix in
-  let finalbuf = Bytes.create (succ preflen + width + sufflen) in
-  Bytes.From_string.blit ~src:prefix ~src_pos:0 ~dst:finalbuf ~dst_pos:0
-    ~len:preflen;
-  Bytes.From_string.blit ~src:suffix ~src_pos:0 ~dst:finalbuf
-    ~dst_pos:(preflen + width) ~len:sufflen;
-  Bytes.set finalbuf (preflen + width + sufflen) lastchar;
+  let prefbytes = Bytes.of_string prefix in
+  let suffbytes = Bytes.of_string suffix in
+
   begin match direction with
   | Direction.Bounce ->
       let lenminuswidth = lentext - width in
       let ticks = succ ((lenminuswidth * cycles) lsl 1) in
+
       let rec loop ticks pos dir =
         if ticks <= 0 then ()
         else begin
-          Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
-            ~len:width;
-          Out_channel.output_bytes stdout finalbuf;
+          Out_channel.output_bytes stdout prefbytes;
+          Out_channel.output stdout ~buf:finaltext ~pos ~len:width;
+          Out_channel.output_bytes stdout suffbytes;
+          Out_channel.output_char stdout lastchar;
           Out_channel.flush stdout;
 
           let ipos = pos + dir in
@@ -162,9 +164,10 @@ let run text
       let rec loop ticks pos =
         if ticks <= 0 then ()
         else begin
-          Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
-            ~len:width;
-          Out_channel.output_bytes stdout finalbuf;
+          Out_channel.output_bytes stdout prefbytes;
+          Out_channel.output stdout ~buf:finaltext ~pos ~len:width;
+          Out_channel.output_bytes stdout suffbytes;
+          Out_channel.output_char stdout lastchar;
           Out_channel.flush stdout;
 
           let ipos = succ pos in
@@ -183,9 +186,10 @@ let run text
       let rec loop ticks pos =
         if ticks <= 0 then ()
         else begin
-          Bytes.blit ~src:finaltext ~src_pos:pos ~dst:finalbuf ~dst_pos:preflen
-            ~len:width;
-          Out_channel.output_bytes stdout finalbuf;
+          Out_channel.output_bytes stdout prefbytes;
+          Out_channel.output stdout ~buf:finaltext ~pos ~len:width;
+          Out_channel.output_bytes stdout suffbytes;
+          Out_channel.output_char stdout lastchar;
           Out_channel.flush stdout;
 
           let ipos = pred pos in
@@ -202,5 +206,3 @@ let run text
   | _ ->
       Out_channel.output_byte stdout 10;
       Out_channel.flush stdout
-
-(* Fix C: Group Writes Using Buffered PipelinesInstead of executing an explicit kernel flush operation on every individual character shift (Out_channel.flush stdout), let the OCaml standard library cache output data tables natively. Only call flush periodically or allow the OS shell pipe to consume bytes in batches. This minimizes kernel context switching transitions, dropping your context thrashing instantly. *)

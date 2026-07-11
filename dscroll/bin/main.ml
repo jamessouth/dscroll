@@ -65,7 +65,10 @@ let () =
        (let%map_open.Command text =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
-        fun () -> run text flags))
+        fun () ->
+          for i = 1 to 1 do
+            run text flags
+          done))
 
 (* let () =
   Gc.print_stat stderr;
@@ -123,6 +126,36 @@ let () =
 
       34.718674823 +- 0.000585936 seconds time elapsed  ( +-  0.00% ) *)
 
+(* Performance counter stats for './_build/default/bin/main.exe mary had a little lamb -c 10 -w 17 -e 150' (10 runs):
+
+                 0      context-switches:u               #      0.0 cs/sec  cs_per_second     
+                 0      cpu-migrations:u                 #      0.0 migrations/sec  migrations_per_second
+             1,790      page-faults:u                    #  51006.6 faults/sec  page_faults_per_second  ( +-  4.42% )
+             35.09 msec task-clock:u                     #      0.0 CPUs  CPUs_utilized         ( +-  1.33% )
+           176,170      L1-dcache-load-misses:u          #      6.9 %  l1d_miss_rate            ( +- 12.19% )  (36.02%)
+           118,900      LLC-loads:u                      #     55.5 %  llc_miss_rate            ( +- 12.90% )  (10.77%)
+            74,345      branch-misses:u                  #      2.3 %  branch_miss_rate         ( +- 10.63% )  (32.19%)
+         5,039,467      branches:u                       #    143.6 M/sec  branch_frequency     ( +- 12.38% )  (29.83%)
+        18,887,279      cpu-cycles:u                     #      0.5 GHz  cycles_frequency       ( +-  7.49% )  (41.24%)
+        23,048,472      instructions:u                   #      1.2 instructions  insn_per_cycle  ( +-  9.15% )  (53.22%)
+
+      34.710313411 +- 0.000621945 seconds time elapsed  ( +-  0.00% ) *)
+
+(* Performance counter stats for './_build/default/bin/main.exe mary had a little lamb -c 10 -w 17 -e 150' (10 runs):
+
+                 0      context-switches:u               #      0.0 cs/sec  cs_per_second     
+                 0      cpu-migrations:u                 #      0.0 migrations/sec  migrations_per_second
+             1,985      page-faults:u                    #  49588.9 faults/sec  page_faults_per_second  ( +-  2.43% )
+             40.03 msec task-clock:u                     #      0.0 CPUs  CPUs_utilized         ( +-  1.68% )
+           162,292      L1-dcache-load-misses:u          #      5.6 %  l1d_miss_rate            ( +- 10.18% )  (34.22%)
+            95,439      LLC-loads:u                      #     59.2 %  llc_miss_rate            ( +- 10.23% )  (9.00%)
+            57,718      branch-misses:u                  #      2.5 %  branch_miss_rate         ( +- 13.02% )  (33.42%)
+         3,856,802      branches:u                       #     96.3 M/sec  branch_frequency     ( +- 13.29% )  (34.49%)
+        17,957,622      cpu-cycles:u                     #      0.4 GHz  cycles_frequency       ( +-  5.08% )  (42.39%)
+        23,144,361      instructions:u                   #      1.1 instructions  insn_per_cycle  ( +-  7.78% )  (56.78%)
+
+      34.721179507 +- 0.002596412 seconds time elapsed  ( +-  0.01% ) *)
+
 (* Performance counter stats for 'zscroll mary had a little lamb -t 34.7 -l 17 -d .15 -p  ' (10 runs):
 
                  0      context-switches:u               #      0.0 cs/sec  cs_per_second     
@@ -161,10 +194,20 @@ heap_chunks: 0 *)
 
 (* Performance counter stats for './_build/default/bin/main.exe mary had a little lamb -c 800 -d bounce -w 17 -e 20':
 
-         4,948,328      cache-references:u                                                    
-         4,178,601      cache-misses:u                                                        
-         1,484,166      LLC-loads:u                                                           
-         1,266,559      LLC-load-misses:u                                                     
+         4,948,328      cache-references:u                 
+         4,178,601      cache-misses:u                     
+         1,484,166      LLC-loads:u                        
+         1,266,559      LLC-load-misses:u                  
+
+        4,573,336      cache-references:u               
+         3,995,634      cache-misses:u                   
+         1,248,502      LLC-loads:u                      
+         1,143,969      LLC-load-misses:u  
+
+        4,132,514      cache-references:u  
+         3,502,758      cache-misses:u         
+         1,053,266      LLC-loads:u            
+           958,665      LLC-load-misses:u  
 
      161.940851705 seconds time elapsed
 
@@ -173,12 +216,25 @@ heap_chunks: 0 *)
 
 (* Performance counter stats for './_build/default/bin/main.exe mary had a little lamb -c 800 -d bounce -w 17 -e 20':
 
-       226,061,143      cycles:u                                                              
-        50,717,344      instructions:u                                                        
-         4,152,680      cache-misses:u                                                        
-         1,261,119      LLC-load-misses:u                                                     
+       226,061,143      cycles:u                           
+        50,717,344      instructions:u                     
+         4,152,680      cache-misses:u                     
+         1,261,119      LLC-load-misses:u       
+         
+        322,334,686      cycles:u               
+        26,372,252      instructions:u                  
+         4,041,087      cache-misses:u                  
+         1,184,626      LLC-load-misses:u   
+
+        188,985,098      cycles:u           
+        29,178,819      instructions:u     
+         3,559,543      cache-misses:u     
+           980,329      LLC-load-misses:u
 
      161.752125860 seconds time elapsed
 
        0.243196000 seconds user
        0.616591000 seconds sys *)
+
+(* 0.70% *)
+(* 0.60% *)
