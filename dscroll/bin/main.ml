@@ -66,7 +66,7 @@ let () =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
         fun () ->
-          for i = 1 to 1 do
+          for i = 1 to 5000 do
             run text flags
           done))
 
@@ -238,3 +238,20 @@ heap_chunks: 0 *)
 
 (* 0.70% *)
 (* 0.60% *)
+
+(* gtl2 *)
+(* Performance counter stats for './_build/default/bin/main.exe mary had a little lamb -c 1 -d bounce -w 17 -e 2':
+
+                 0      context-switches:u               #      0.0 cs/sec  cs_per_second     
+                 0      cpu-migrations:u                 #      0.0 migrations/sec  migrations_per_second
+             2,078      page-faults:u                    #    155.5 faults/sec  page_faults_per_second
+         13,362.51 msec task-clock:u                     #      0.1 CPUs  CPUs_utilized       
+         9,218,267      branch-misses:u                  #     17.2 %  branch_miss_rate         (67.45%)
+        53,934,660      branches:u                       #      4.0 M/sec  branch_frequency     (66.75%)
+     4,439,806,992      cpu-cycles:u                     #      0.3 GHz  cycles_frequency       (66.26%)
+       243,816,856      instructions:u                   #      0.1 instructions  insn_per_cycle  (66.13%)
+
+     251.167726722 seconds time elapsed
+
+       2.898982000 seconds user
+       9.919058000 seconds sys *)

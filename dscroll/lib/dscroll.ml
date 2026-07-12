@@ -52,24 +52,25 @@ type cliflags = {
   width : int;
 }
 
+external unsafe_output_bytes : Out_channel.t -> bytes -> int -> int -> unit
+  = "caml_ml_output_bytes"
+[@@noalloc]
+
 let rec gettextlen acc = function
   | [] -> acc
   | str :: rest -> gettextlen (acc + String.length str + 1) rest
 
-let gtl2 text =
-  List.fold text ~init:(-1) ~f:(fun acc s -> acc + String.length s + 1)
-
-let rec blit_text_list ~dst text pos =
-  match text with
+let rec blittext ~dst pos = function
   | [] -> ()
-  | [ s ] ->
+  | s :: ts -> (
       let len = String.length s in
-      Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len
-  | s :: ts ->
-      let len = String.length s in
+      let poslen = pos + len in
       Bytes.From_string.blit ~src:s ~src_pos:0 ~dst ~dst_pos:pos ~len;
-      Bytes.set dst (pos + len) ' ';
-      blit_text_list ~dst ts (pos + len + 1)
+      match ts with
+      | [] -> ()
+      | _ ->
+          Bytes.set dst poslen ' ';
+          blittext ~dst (succ poslen) ts)
 
 let getfinaltext text endcap_char endcap_len width direction =
   let text_len = gettextlen (-1) text in
@@ -94,15 +95,15 @@ let getfinaltext text endcap_char endcap_len width direction =
   (match direction with
   | Bounce ->
       Bytes.fill buf ~pos:0 ~len:ecl endcap_char;
-      blit_text_list ~dst:buf text ecl;
+      blittext ~dst:buf ecl text;
       Bytes.fill buf ~pos:(ecl + text_len) ~len:ecl endcap_char
   | Left ->
-      blit_text_list ~dst:buf text 0;
+      blittext ~dst:buf 0 text;
       Bytes.fill buf ~pos:text_len ~len:ecl endcap_char;
       Bytes.blit ~src:buf ~src_pos:0 ~dst:buf ~dst_pos:halflen ~len:halflen
   | Right ->
       Bytes.fill buf ~pos:0 ~len:ecl endcap_char;
-      blit_text_list ~dst:buf text ecl;
+      blittext ~dst:buf ecl text;
       Bytes.blit ~src:buf ~src_pos:0 ~dst:buf ~dst_pos:halflen ~len:halflen);
   buf
 
@@ -127,21 +128,21 @@ let run text
   in
   let prefbytes = Bytes.of_string prefix in
   let suffbytes = Bytes.of_string suffix in
-
+  let print pos =
+    Out_channel.output_bytes stdout prefbytes;
+    unsafe_output_bytes stdout finaltext pos width;
+    Out_channel.output_bytes stdout suffbytes;
+    Out_channel.output_char stdout lastchar;
+    Out_channel.flush stdout
+  in
   begin match direction with
   | Direction.Bounce ->
       let lenminuswidth = lentext - width in
       let ticks = succ ((lenminuswidth * cycles) lsl 1) in
-
       let rec loop ticks pos dir =
         if ticks <= 0 then ()
         else begin
-          Out_channel.output_bytes stdout prefbytes;
-          Out_channel.output stdout ~buf:finaltext ~pos ~len:width;
-          Out_channel.output_bytes stdout suffbytes;
-          Out_channel.output_char stdout lastchar;
-          Out_channel.flush stdout;
-
+          print pos;
           let ipos = pos + dir in
           let npos =
             if ipos <= 0 then 0
@@ -151,7 +152,6 @@ let run text
           let ndir =
             if ipos <= 0 then 1 else if ipos >= lenminuswidth then -1 else dir
           in
-
           Sleep.caml_clock_nanosleep speed;
           (loop [@tailcall]) (pred ticks) npos ndir
         end
@@ -159,20 +159,13 @@ let run text
       loop ticks 0 1
   | Left ->
       let halflen = lentext asr 1 in
-
       let ticks = succ (halflen * cycles) in
       let rec loop ticks pos =
         if ticks <= 0 then ()
         else begin
-          Out_channel.output_bytes stdout prefbytes;
-          Out_channel.output stdout ~buf:finaltext ~pos ~len:width;
-          Out_channel.output_bytes stdout suffbytes;
-          Out_channel.output_char stdout lastchar;
-          Out_channel.flush stdout;
-
+          print pos;
           let ipos = succ pos in
           let npos = if ipos >= halflen then 0 else ipos in
-
           Sleep.caml_clock_nanosleep speed;
           (loop [@tailcall]) (pred ticks) npos
         end
@@ -186,15 +179,9 @@ let run text
       let rec loop ticks pos =
         if ticks <= 0 then ()
         else begin
-          Out_channel.output_bytes stdout prefbytes;
-          Out_channel.output stdout ~buf:finaltext ~pos ~len:width;
-          Out_channel.output_bytes stdout suffbytes;
-          Out_channel.output_char stdout lastchar;
-          Out_channel.flush stdout;
-
+          print pos;
           let ipos = pred pos in
           let npos = if ipos <= minpos then lenminuswidth else ipos in
-
           Sleep.caml_clock_nanosleep speed;
           (loop [@tailcall]) (pred ticks) npos
         end
