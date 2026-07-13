@@ -66,7 +66,7 @@ let () =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
         fun () ->
-          for i = 1 to 5000 do
+          for i = 1 to 1 do
             run text flags
           done))
 
@@ -171,6 +171,22 @@ let () =
 
       34.872235882 +- 0.002206712 seconds time elapsed  ( +-  0.01% ) *)
 
+(* 
+ Performance counter stats for 'sh -c echo "mary had a little lamb" | skroll  -l -r -d .15 -n 17' (10 runs):
+
+                 0      context-switches:u               #      0.0 cs/sec  cs_per_second     
+                 0      cpu-migrations:u                 #      0.0 migrations/sec  migrations_per_second
+               334      page-faults:u                    #   1413.9 faults/sec  page_faults_per_second
+            236.23 msec task-clock:u                     #      0.0 CPUs  CPUs_utilized       
+           152,924      L1-dcache-load-misses:u          #     39.4 %  l1d_miss_rate            (27.80%)
+           152,900      LLC-loads:u                      #     97.1 %  llc_miss_rate            (15.53%)
+           102,343      branch-misses:u                  #     11.0 %  branch_miss_rate         (30.73%)
+         1,303,071      branches:u                       #      5.5 M/sec  branch_frequency     (26.24%)
+        22,892,532      cpu-cycles:u                     #      0.1 GHz  cycles_frequency       (39.90%)
+         4,125,324      instructions:u                   #      0.2 instructions  insn_per_cycle  (54.56%)
+
+     347.545158359 +- 0.000000000 seconds time elapsed *)
+
 (* ---
 minor_collections:      9
 major_collections:      4
@@ -230,6 +246,14 @@ heap_chunks: 0 *)
         29,178,819      instructions:u     
          3,559,543      cache-misses:u     
            980,329      LLC-load-misses:u
+
+          1,008.21 msec task-clock:u                                                          
+       265,738,382      cycles:u                                                              
+        29,101,228      instructions:u                                                        
+         3,571,709      cache-misses:u                                                        
+           989,459      LLC-load-misses:u  
+
+
 
      161.752125860 seconds time elapsed
 
