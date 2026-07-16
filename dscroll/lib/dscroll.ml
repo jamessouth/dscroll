@@ -1,12 +1,12 @@
 open Core
 
-module Direction = struct
-  type t = Left | Right | Bounce [@@deriving equal, sexp]
+module Terminator = struct
+  type t = Newline | Return | Space [@@deriving sexp]
 
   let arg =
     Command.Arg_type.of_alist_exn ~accept_unique_prefixes:true
       ~case_sensitive:false ~list_values_in_help:false
-      [ ("left", Left); ("right", Right); ("bounce", Bounce) ]
+      [ ("newline", Newline); ("return", Return); ("space", Space) ]
 end
 
 module Ints = struct
@@ -26,12 +26,12 @@ module Ints = struct
 end
 
 module Mode = struct
-  type t = Newline | Return | Spaces [@@deriving sexp]
+  type t = Char | Word [@@deriving sexp]
 
   let arg =
     Command.Arg_type.of_alist_exn ~accept_unique_prefixes:true
       ~case_sensitive:false ~list_values_in_help:false
-      [ ("newline", Newline); ("return", Return); ("spaces", Spaces) ]
+      [ ("char", Char); ("word", Word) ]
 end
 
 module Externs = struct
@@ -49,16 +49,26 @@ module Externs = struct
   external unsafe_flush : Out_channel.t -> unit = "caml_ml_flush" [@@noalloc]
 end
 
+module Direction = struct
+  type t = Left | Right | Bounce [@@deriving equal, sexp]
+
+  let arg =
+    Command.Arg_type.of_alist_exn ~accept_unique_prefixes:true
+      ~case_sensitive:false ~list_values_in_help:false
+      [ ("left", Left); ("right", Right); ("bounce", Bounce) ]
+end
+
 type cliflags = {
   cycles : int;
   direction : Direction.t;
   endcap_char : char;
   endcap_len : int;
   initial_pause : int;
-  output_mode : Mode.t;
+  mode : Mode.t;
   prefix : string;
-  speed : int;
+  sleep : int;
   suffix : string;
+  terminator : Terminator.t;
   width : int;
 }
 
@@ -118,20 +128,21 @@ let run text
       endcap_char;
       endcap_len;
       initial_pause;
-      output_mode;
+      mode;
       prefix;
-      speed;
+      sleep;
       suffix;
+      terminator;
       width;
     } =
   let finaltext = getfinaltext text endcap_char endcap_len width direction in
   let lentext = Bytes.length finaltext in
   let lastchar =
     (* cli help info doesn't look right so these chars are here *)
-    match output_mode with
+    match terminator with
     | Newline -> '\n'
     | Return -> '\r'
-    | Spaces -> ' '
+    | Space -> ' '
   in
   let print pos =
     Externs.unsafe_output_bytes stdout (Bytes.of_string prefix) 0
@@ -159,21 +170,25 @@ let run text
           let ndir =
             if ipos <= 0 then 1 else if ipos >= lenminuswidth then -1 else dir
           in
-          Externs.caml_clock_nanosleep speed;
+          Externs.caml_clock_nanosleep sleep;
           (loop [@tailcall]) (pred ticks) npos ndir
         end
       in
       loop ticks 0 1
   | Left ->
       let halflen = lentext asr 1 in
-      let ticks = succ (halflen * cycles) in
+      let ticks =
+        match mode with
+        | Char -> succ (halflen * cycles)
+        | Word -> List.fold text ~init:1 ~f:(fun i _ -> succ i)
+      in
       let rec loop ticks pos =
         if ticks <= 0 then ()
         else begin
           print pos;
           let ipos = succ pos in
           let npos = if ipos >= halflen then 0 else ipos in
-          Externs.caml_clock_nanosleep speed;
+          Externs.caml_clock_nanosleep sleep;
           (loop [@tailcall]) (pred ticks) npos
         end
       in
@@ -189,13 +204,13 @@ let run text
           print pos;
           let ipos = pred pos in
           let npos = if ipos <= minpos then lenminuswidth else ipos in
-          Externs.caml_clock_nanosleep speed;
+          Externs.caml_clock_nanosleep sleep;
           (loop [@tailcall]) (pred ticks) npos
         end
       in
       loop ticks lenminuswidth
   end;
-  match output_mode with
+  match terminator with
   | Newline -> ()
   | _ ->
       Out_channel.output_byte stdout 10;

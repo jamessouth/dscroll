@@ -12,11 +12,12 @@ let flags : cliflags Command.Param.t =
       Direction.sexp_of_t ~default:Left
       ~doc:"string scroll left, right, or bounce"
   and endcap_char =
-    flag_optional_with_default_doc "--endcap-char" ~aliases:[ "-h" ] char
+    flag_optional_with_default_doc "--endcap-char" ~aliases:[ "-ec" ] char
       (fun x -> Char.sexp_of_t x)
       ~default:' ' ~doc:"char pad between end and start of TEXT"
   and endcap_len =
-    flag_optional_with_default_doc "--endcap-len" ~aliases:[ "-l" ] Ints.oneplus
+    flag_optional_with_default_doc "--endcap-len" ~aliases:[ "-el" ]
+      Ints.oneplus
       (fun x -> Int.sexp_of_t x)
       ~default:1 ~doc:"int minimum length of endcap"
   and initial_pause =
@@ -24,22 +25,25 @@ let flags : cliflags Command.Param.t =
       Ints.nonneg
       (fun x -> Int.sexp_of_t x)
       ~default:0 ~doc:"int wait in ms before scrolling begins"
-  and output_mode =
-    flag_optional_with_default_doc "--output-mode" ~aliases:[ "-o" ] Mode.arg
-      Mode.sexp_of_t ~default:Newline
-      ~doc:"string print with \\n, \\r, or spaces"
+  and mode =
+    flag_optional_with_default_doc "--mode" ~aliases:[ "-m" ] Mode.arg
+      Mode.sexp_of_t ~default:Char ~doc:"string scroll by character or by word"
   and prefix =
     flag_optional_with_default_doc "--prefix" ~aliases:[ "-p" ] string
       (fun x -> String.sexp_of_t x)
       ~default:"" ~doc:"string prefix at left of display"
-  and speed =
-    flag_optional_with_default_doc "--speed" ~aliases:[ "-e" ] Ints.oneplus
+  and sleep =
+    flag_optional_with_default_doc "--sleep" ~aliases:[ "-sl" ] Ints.oneplus
       (fun x -> Int.sexp_of_t x)
       ~default:300 ~doc:"int sleep in ms per scroll of TEXT"
   and suffix =
-    flag_optional_with_default_doc "--suffix" ~aliases:[ "-s" ] string
+    flag_optional_with_default_doc "--suffix" ~aliases:[ "-su" ] string
       (fun x -> String.sexp_of_t x)
       ~default:"" ~doc:"string suffix at right of display"
+  and terminator =
+    flag_optional_with_default_doc "--terminator" ~aliases:[ "-t" ]
+      Terminator.arg Terminator.sexp_of_t ~default:Newline
+      ~doc:"string end with \\n, \\r, or space"
   and width =
     flag_optional_with_default_doc "--width" ~aliases:[ "-w" ] Ints.twoplus
       (fun x -> Int.sexp_of_t x)
@@ -51,10 +55,11 @@ let flags : cliflags Command.Param.t =
     endcap_char;
     endcap_len;
     initial_pause;
-    output_mode;
+    mode;
     prefix;
-    speed;
+    sleep;
     suffix;
+    terminator;
     width;
   }
 
@@ -65,10 +70,7 @@ let () =
        (let%map_open.Command text =
           anon (non_empty_sequence_as_list ("text" %: string))
         and flags in
-        fun () ->
-          for i = 1 to 1 do
-            run text flags
-          done))
+        fun () -> run text flags))
 
 (* let () =
   Gc.print_stat stderr;
@@ -83,9 +85,9 @@ let () =
       endcap_char = 'W';
       endcap_len = 2;
       initial_pause = 0;
-      output_mode = Newline;
+      terminator = Newline;
       prefix = "XX";
-      speed = 32;
+      sleep = 32;
       suffix = "UU";
       width = 7;
     }
@@ -279,3 +281,96 @@ heap_chunks: 0 *)
 
        2.898982000 seconds user
        9.919058000 seconds sys *)
+
+(* Performance counter stats for './_build/default/bin/main.exe mary had a little lamb -c 10 -w 17 -e 150' (10 runs):
+
+            0      context-switches:u      #      0.0 cs/sec  cs_per_second
+            0      cpu-migrations:u        #      0.0 migrations/sec  migrations_per_second
+        1,571      page-faults:u           #  39917.4 faults/sec  page_faults_per_second  ( +-  0.03% )
+        39.36 msec task-clock:u            #      0.0 CPUs  CPUs_utilized         ( +-  1.84% )
+    277,758      L1-dcache-load-misses:u #      6.5 %  l1d_miss_rate            ( +- 10.92% )  (45.97%)
+    115,254      LLC-loads:u             #     59.8 %  llc_miss_rate            ( +- 13.00% )  (14.94%)
+    68,371      branch-misses:u         #      2.4 %  branch_miss_rate         ( +- 11.58% )  (30.33%)
+    3,317,705      branches:u              #     84.3 M/sec  branch_frequency     ( +- 16.86% )  (24.24%)
+16,843,137      cpu-cycles:u            #      0.4 GHz  cycles_frequency       ( +-  7.40% )  (32.26%)
+18,008,144      instructions:u          #      1.0 instructions  insn_per_cycle  ( +-  7.84% )  (39.08%)
+
+      34.717703485 +- 0.000865136 seconds time elapsed  ( +-  0.00% ) *)
+
+(* Performance counter stats for './_build/default/bin/main.exe mary had a little lamb -c 10 -w 17 -e 150' (10 runs):
+
+                 0      context-switches:u               #      0.0 cs/sec  cs_per_second
+                 0      cpu-migrations:u                 #      0.0 migrations/sec  migrations_per_second
+             2,185      page-faults:u                    #  32743.8 faults/sec  page_faults_per_second  ( +-  0.11% )
+             66.73 msec task-clock:u                     #      0.0 CPUs  CPUs_utilized         ( +-  2.76% )
+           509,892      L1-dcache-load-misses:u          #      6.6 %  l1d_miss_rate            ( +-  5.10% )  (42.21%)
+           314,390      LLC-loads:u                      #     53.5 %  llc_miss_rate            ( +-  6.73% )  (14.14%)
+           267,895      branch-misses:u                  #      3.8 %  branch_miss_rate         ( +-  3.72% )  (26.28%)
+         8,073,777      branches:u                       #    121.0 M/sec  branch_frequency     ( +-  8.02% )  (22.58%)
+        39,783,889      cpu-cycles:u                     #      0.6 GHz  cycles_frequency       ( +-  7.08% )  (33.54%)
+        39,915,863      instructions:u                   #      1.0 instructions  insn_per_cycle  ( +-  4.08% )  (43.65%)
+
+      34.720812527 +- 0.002001037 seconds time elapsed  ( +-  0.01% ) *)
+
+(* strace -c ./_build/default/bin/main.exe mary had a little lamb -c 30 -d bounce -w 17 -e 10 *)
+(* % time  seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 49.82    0.010887          36       301           clock_nanosleep
+ 43.05    0.009407          31       301           write
+  3.71    0.000810          11        71           mmap
+  1.32    0.000289         289         1           execve
+  0.47    0.000102          25         4           mprotect
+  0.26    0.000056          56         1           munmap
+  0.24    0.000053           8         6           brk
+  0.16    0.000036          12         3           openat
+  0.16    0.000034          34         1           readlink
+  0.11    0.000024          12         2           read
+  0.09    0.000020           6         3           sigaltstack
+  0.09    0.000019           6         3           close
+  0.09    0.000019           6         3           fstat
+  0.08    0.000017           8         2           pread64
+  0.06    0.000013           4         3         3 lseek
+  0.05    0.000011          11         1           newfstatat
+  0.05    0.000010          10         1           getrandom
+  0.04    0.000009           9         1         1 access
+  0.03    0.000007           7         1           arch_prctl
+  0.03    0.000006           6         1           set_tid_address
+  0.03    0.000006           6         1           set_robust_list
+  0.03    0.000006           6         1           prlimit64
+  0.03    0.000006           6         1           rseq
+  0.02    0.000005           5         1           rt_sigaction
+  0.00    0.000000           0         1           getcwd
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.021852          30       715         4 total *)
+
+(* % time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ------------------
+ 78.97    0.003402          11       302           io_uring_enter
+ 12.07    0.000520           6        80           mmap
+  2.18    0.000094          23         4           munmap
+  1.51    0.000065          16         4           mprotect
+  1.37    0.000059          29         2           io_uring_register
+  0.93    0.000040           6         6           brk
+  0.72    0.000031           6         5           close
+  0.67    0.000029          29         1           readlink
+  0.49    0.000021           5         4         4 lseek
+  0.42    0.000018           6         3           sigaltstack
+  0.23    0.000010          10         1           newfstatat
+  0.16    0.000007           7         1           eventfd2
+  0.12    0.000005           2         2           rt_sigaction
+  0.09    0.000004           4         1           getrandom
+  0.07    0.000003           3         1           prlimit64
+  0.00    0.000000           0         2           read
+  0.00    0.000000           0         3           fstat
+  0.00    0.000000           0         2           pread64
+  0.00    0.000000           0         1         1 access
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           getcwd
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         1           set_tid_address
+  0.00    0.000000           0         3           openat
+  0.00    0.000000           0         1           set_robust_list
+  0.00    0.000000           0         1           rseq
+  0.00    0.000000           0         1           io_uring_setup
+------ ----------- ----------- --------- --------- ------------------
+100.00    0.004308           9       435         5 total *)
