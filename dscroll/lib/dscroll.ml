@@ -175,40 +175,75 @@ let run text
         end
       in
       loop ticks 0 1
-  | Left ->
+  | Left -> begin
       let halflen = lentext asr 1 in
-      let ticks =
-        match mode with
-        | Char -> succ (halflen * cycles)
-        | Word -> List.fold text ~init:1 ~f:(fun i _ -> succ i)
-      in
-      let rec loop ticks pos =
-        if ticks <= 0 then ()
-        else begin
-          print pos;
-          let ipos = succ pos in
-          let npos = if ipos >= halflen then 0 else ipos in
-          Externs.caml_clock_nanosleep sleep;
-          (loop [@tailcall]) (pred ticks) npos
-        end
-      in
-      loop ticks 0
-  | Right ->
+      match mode with
+      | Char ->
+          let ticks = succ (halflen * cycles) in
+          let rec loop ticks pos =
+            if ticks <= 0 then ()
+            else begin
+              print pos;
+              let ipos = succ pos in
+              let npos = if ipos >= halflen then 0 else ipos in
+              Externs.caml_clock_nanosleep sleep;
+              (loop [@tailcall]) (pred ticks) npos
+            end
+          in
+          loop ticks 0
+      | Word ->
+          let ticks =
+            succ (List.fold text ~init:0 ~f:(fun i _ -> succ i) * cycles)
+          in
+          let rec loop ticks pos =
+            if ticks <= 0 then ()
+            else begin
+              print pos;
+              let ipos = succ (Stdlib.Bytes.index_from finaltext pos ' ') in
+              let npos = if ipos >= halflen then 0 else ipos in
+              Externs.caml_clock_nanosleep sleep;
+              (loop [@tailcall]) (pred ticks) npos
+            end
+          in
+          loop ticks 0
+    end
+  | Right -> (
       let lenminuswidth = lentext - width in
       let halflen = lentext asr 1 in
       let minpos = lenminuswidth - halflen in
-      let ticks = succ (halflen * cycles) in
-      let rec loop ticks pos =
-        if ticks <= 0 then ()
-        else begin
-          print pos;
-          let ipos = pred pos in
-          let npos = if ipos <= minpos then lenminuswidth else ipos in
-          Externs.caml_clock_nanosleep sleep;
-          (loop [@tailcall]) (pred ticks) npos
-        end
-      in
-      loop ticks lenminuswidth
+      match mode with
+      | Char ->
+          let ticks = succ (halflen * cycles) in
+          let rec loop ticks pos =
+            if ticks <= 0 then ()
+            else begin
+              print pos;
+              let ipos = pred pos in
+              let npos = if ipos <= minpos then lenminuswidth else ipos in
+              Externs.caml_clock_nanosleep sleep;
+              (loop [@tailcall]) (pred ticks) npos
+            end
+          in
+          loop ticks lenminuswidth
+      | Word ->
+          print_endline (Bytes.to_string finaltext);
+          print_endline (string_of_int lenminuswidth);
+          let ticks =
+            succ (List.fold text ~init:0 ~f:(fun i _ -> succ i) * cycles)
+          in
+          let rec loop ticks pos =
+            if ticks <= 0 then ()
+            else begin
+              print pos;
+              let ipos =
+                pred (Stdlib.Bytes.rindex_from finaltext (pred pos + width) ' ')
+              in
+              let npos = if ipos <= minpos then lenminuswidth else ipos in
+              Externs.caml_clock_nanosleep sleep;
+              (loop [@tailcall]) (pred ticks) npos
+            end
+          in
+          loop ticks lenminuswidth)
   end;
   match terminator with
   | Newline -> ()
