@@ -154,27 +154,64 @@ let run text
     Externs.unsafe_flush stdout
   in
   begin match direction with
-  | Direction.Bounce ->
+  | Direction.Bounce -> begin
       let lenminuswidth = lentext - width in
-      let ticks = succ ((lenminuswidth * cycles) lsl 1) in
-      let rec loop ticks pos dir =
-        if ticks <= 0 then ()
-        else begin
-          print pos;
-          let ipos = pos + dir in
-          let npos =
-            if ipos <= 0 then 0
-            else if ipos >= lenminuswidth then lenminuswidth
-            else ipos
+      print_endline (Bytes.to_string finaltext);
+      print_endline (string_of_int lenminuswidth);
+      match mode with
+      | Char ->
+          let ticks = succ ((lenminuswidth * cycles) lsl 1) in
+          let rec loop ticks pos dir =
+            if ticks <= 0 then ()
+            else begin
+              print pos;
+              let ipos = pos + dir in
+              let npos =
+                if ipos <= 0 then 0
+                else if ipos >= lenminuswidth then lenminuswidth
+                else ipos
+              in
+              let ndir =
+                if ipos <= 0 then 1
+                else if ipos >= lenminuswidth then -1
+                else dir
+              in
+              Externs.caml_clock_nanosleep sleep;
+              (loop [@tailcall]) (pred ticks) npos ndir
+            end
           in
-          let ndir =
-            if ipos <= 0 then 1 else if ipos >= lenminuswidth then -1 else dir
+          loop ticks 0 1
+      | Word ->
+          let ticks = succ ((lenminuswidth * cycles) lsl 1) in
+          let predwidth = pred width in
+
+          let rec loop ticks pos dir =
+            if ticks <= 0 then ()
+            else begin
+              print pos;
+              let ipos =
+                (*errors if no space in finaltext*)
+                if dir = 1 then succ (Stdlib.Bytes.index_from finaltext pos ' ')
+                else
+                  Stdlib.Bytes.rindex_from finaltext (pos + predwidth) ' '
+                  - width
+              in
+              let npos =
+                if ipos <= 0 then 0
+                else if ipos >= lenminuswidth then lenminuswidth
+                else ipos
+              in
+              let ndir =
+                if ipos <= 0 then 1
+                else if ipos >= lenminuswidth then -1
+                else dir
+              in
+              Externs.caml_clock_nanosleep sleep;
+              (loop [@tailcall]) (pred ticks) npos ndir
+            end
           in
-          Externs.caml_clock_nanosleep sleep;
-          (loop [@tailcall]) (pred ticks) npos ndir
-        end
-      in
-      loop ticks 0 1
+          loop ticks 0 1
+    end
   | Left -> begin
       let halflen = lentext asr 1 in
       match mode with
@@ -235,10 +272,9 @@ let run text
             else begin
               print pos;
               let ipos =
-                Stdlib.Bytes.rindex_from finaltext (pos + predwidth) ' '
+                Stdlib.Bytes.rindex_from finaltext (pos + predwidth) ' ' - width
               in
-              let tpos = ipos - width in
-              let npos = if tpos <= minpos then lenminuswidth else tpos in
+              let npos = if ipos <= minpos then lenminuswidth else ipos in
               Externs.caml_clock_nanosleep sleep;
               (loop [@tailcall]) (pred ticks) npos
             end
