@@ -66,6 +66,7 @@ type cliflags = {
   initial_pause : int;
   mode : Mode.t;
   prefix : string;
+  reset : bool;
   sleep : int;
   suffix : string;
   terminator : Terminator.t;
@@ -131,6 +132,7 @@ let run text
       initial_pause;
       mode;
       prefix;
+      reset;
       sleep;
       suffix;
       terminator;
@@ -156,76 +158,29 @@ let run text
     Externs.unsafe_output_char stdout lastchar;
     Externs.unsafe_flush stdout
   in
-  (* word mode delimits on spaces, so if the input doesn't have any, or if a word is longer than the width, scroll behavior may be different than expected, but shouldn't error. word mode is like char mode when width < input length. also, no elegant solution has been found for when the input length is equal to the width and the direction is bounce. *)
+  (* word mode delimits on spaces, so if the input doesn't have any, or if a word is longer than the width, scroll behavior may be different than expected, but shouldn't error. word mode is like char mode when width < input length. also, no elegant solution has been found for when the input length is equal to the width and the direction is bounce. removing bounce+word, too hard to get right*)
   begin match direction with
   | Direction.Bounce -> begin
       let lenminuswidth = lentext - width in
-      match mode with
-      | Char ->
-          let ticks = succ ((lenminuswidth * cycles) lsl 1) in
-          let rec loop ticks pos dir =
-            if ticks <= 0 then ()
-            else begin
-              print pos;
-              let ipos = pos + dir in
-              let npos =
-                if ipos <= 0 then 0
-                else if ipos >= lenminuswidth then lenminuswidth
-                else ipos
-              in
-              let ndir =
-                if ipos <= 0 then 1
-                else if ipos >= lenminuswidth then -1
-                else dir
-              in
-              Externs.caml_clock_nanosleep sleep;
-              (loop [@tailcall]) (pred ticks) npos ndir
-            end
+      let ticks = succ ((lenminuswidth * cycles) lsl 1) in
+      let rec loop ticks pos dir =
+        if ticks <= 0 then ()
+        else begin
+          print pos;
+          let ipos = pos + dir in
+          let npos =
+            if ipos <= 0 then 0
+            else if ipos >= lenminuswidth then lenminuswidth
+            else ipos
           in
-          loop ticks 0 1
-      | Word ->
-          let ticks =
-            succ
-              (2
-              * succ
-                  (Bytes.foldi finaltext ~init:0 ~f:(fun i a x ->
-                       if i < pred lenminuswidth && Char.( = ) x ' ' then succ a
-                       else a))
-              * cycles)
+          let ndir =
+            if ipos <= 0 then 1 else if ipos >= lenminuswidth then -1 else dir
           in
-          let rec loop ticks pos dir =
-            if ticks <= 0 then ()
-            else begin
-              print pos;
-              let ipos =
-                if dir = 1 then
-                  match Stdlib.Bytes.index_from_opt finaltext pos ' ' with
-                  | Some i -> succ i
-                  | None -> lenminuswidth
-                else
-                  match
-                    Stdlib.Bytes.rindex_from_opt finaltext
-                      (Int.max 0 (pos - 2))
-                      ' '
-                  with
-                  | Some i -> succ i
-                  | None -> 0
-              in
-              let npos =
-                if ipos <= 0 then 0
-                else if ipos >= lenminuswidth then lenminuswidth
-                else ipos
-              in
-              let ndir =
-                if ipos <= 0 then 1
-                else if ipos >= lenminuswidth then -1
-                else dir
-              in
-              Externs.caml_clock_nanosleep sleep;
-              (loop [@tailcall]) (pred ticks) npos ndir
-            end
-          in
-          loop ticks 0 1
+          Externs.caml_clock_nanosleep sleep;
+          (loop [@tailcall]) (pred ticks) npos ndir
+        end
+      in
+      loop ticks 0 1
     end
   | Left -> begin
       let halflen = lentext asr 1 in
