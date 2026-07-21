@@ -33,8 +33,9 @@ let flags : cliflags Command.Param.t =
       (fun x -> String.sexp_of_t x)
       ~default:"" ~doc:"string prefix at left of display"
   and reset =
-    Command.Param.(
-      flag "--reset" no_arg ~doc:"bool reset TEXT instead of wrapping around")
+    flag_optional_with_default_doc "--reset" ~aliases:[ "-r" ] bool
+      (fun x -> Bool.sexp_of_t x)
+      ~default:false ~doc:"bool reset TEXT when end is reached"
   and sleep =
     flag_optional_with_default_doc "--sleep" ~aliases:[ "-sl" ] Ints.oneplus
       (fun x -> Int.sexp_of_t x)

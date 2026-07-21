@@ -26,7 +26,7 @@ module Ints = struct
 end
 
 module Mode = struct
-  type t = Char | Word [@@deriving equal, sexp]
+  type t = Char | Word [@@deriving sexp]
 
   let arg =
     Command.Arg_type.of_alist_exn ~accept_unique_prefixes:true
@@ -94,7 +94,6 @@ let getfinaltext text endcap_char endcap_len width direction mode =
   let width_minus_text_len = width - text_len in
   let ecl =
     if Direction.equal direction Bounce then Int.max 0 width_minus_text_len
-    else if Mode.equal mode Word then 1
     else
       Int.clamp_exn
         (Int.max endcap_len width_minus_text_len)
@@ -122,6 +121,14 @@ let getfinaltext text endcap_char endcap_len width direction mode =
       Bytes.blit ~src:buf ~src_pos:0 ~dst:buf ~dst_pos:halflen ~len:halflen
   end;
   buf
+
+let rec getspaces th byt idx list =
+  if idx = th then list
+  else if
+    Char.( = ) (Bytes.unsafe_get byt idx) ' '
+    && Char.( <> ) (Bytes.unsafe_get byt (succ idx)) ' '
+  then getspaces th byt (pred idx) ((idx - th) :: list)
+  else getspaces th byt (pred idx) list
 
 let run text
     {
@@ -158,7 +165,6 @@ let run text
     Externs.unsafe_output_char stdout lastchar;
     Externs.unsafe_flush stdout
   in
-  (* word mode delimits on spaces, so if the input doesn't have any, or if a word is longer than the width, scroll behavior may be different than expected, but shouldn't error. word mode is like char mode when width < input length. also, no elegant solution has been found for when the input length is equal to the width and the direction is bounce. removing bounce+word, too hard to get right*)
   begin match direction with
   | Direction.Bounce -> begin
       let lenminuswidth = lentext - width in
@@ -222,6 +228,8 @@ let run text
       let lenminuswidth = lentext - width in
       let halflen = lentext asr 1 in
       let minpos = lenminuswidth - halflen in
+      print_endline (Bytes.to_string finaltext);
+      print_endline (string_of_int lenminuswidth);
       match mode with
       | Char ->
           let ticks = succ (halflen * cycles) in
@@ -237,27 +245,27 @@ let run text
           in
           loop ticks lenminuswidth
       | Word ->
-          let ticks =
-            succ (List.fold text ~init:0 ~f:(fun i _ -> succ i) * cycles)
+          let wordcount = List.fold text ~init:0 ~f:(fun i _ -> succ i) in
+          let ticks = succ (wordcount * cycles) in
+          let indexes =
+            List.take
+              (List.rev
+                 (getspaces width finaltext (pred lentext) [ lenminuswidth ]))
+              wordcount
           in
-          let predwidth = pred width in
-          let rec loop ticks pos =
+          let rec loop ticks posns =
             if ticks <= 0 then ()
             else begin
+              let pos = List.hd_exn posns in
               print pos;
-              let ipos =
-                match
-                  Stdlib.Bytes.rindex_from_opt finaltext (pos + predwidth) ' '
-                with
-                | Some i -> i - width
-                | None -> 0
+              let posns =
+                if List.length posns = 1 then indexes else List.tl_exn posns
               in
-              let npos = if ipos <= minpos then lenminuswidth else ipos in
               Externs.caml_clock_nanosleep sleep;
-              (loop [@tailcall]) (pred ticks) npos
+              (loop [@tailcall]) (pred ticks) posns
             end
           in
-          loop ticks lenminuswidth
+          loop ticks indexes
     end
   end;
   match terminator with
