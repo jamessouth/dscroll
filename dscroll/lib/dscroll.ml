@@ -122,13 +122,23 @@ let getfinaltext text endcap_char endcap_len width direction mode =
   end;
   buf
 
-let rec getspaces th byt idx list =
+let rec getwordboundariesright th byt idx list =
   if idx = th then list
   else if
     Char.( = ) (Bytes.unsafe_get byt idx) ' '
     && Char.( <> ) (Bytes.unsafe_get byt (succ idx)) ' '
-  then getspaces th byt (pred idx) ((idx - th) :: list)
-  else getspaces th byt (pred idx) list
+  then getwordboundariesright th byt (pred idx) ((idx - th) :: list)
+  else getwordboundariesright th byt (pred idx) list
+
+let rec getwordboundariesleft th byt idx list =
+  if idx = th then list
+  else
+    let sidx = succ idx in
+    if
+      Char.( = ) (Bytes.unsafe_get byt idx) ' '
+      && Char.( <> ) (Bytes.unsafe_get byt sidx) ' '
+    then getwordboundariesleft th byt sidx (sidx :: list)
+    else getwordboundariesleft th byt sidx list
 
 let run text
     {
@@ -190,6 +200,8 @@ let run text
     end
   | Left -> begin
       let halflen = lentext asr 1 in
+      print_endline (Bytes.to_string finaltext);
+      print_endline (string_of_int halflen);
       match mode with
       | Char ->
           let ticks = succ (halflen * cycles) in
@@ -205,31 +217,31 @@ let run text
           in
           loop ticks 0
       | Word ->
-          let ticks =
-            succ (List.fold text ~init:0 ~f:(fun i _ -> succ i) * cycles)
+          let wordcount = List.fold text ~init:0 ~f:(fun i _ -> succ i) in
+          let ticks = succ (wordcount * cycles) in
+          let indexes =
+            List.take
+              (List.rev (getwordboundariesleft halflen finaltext 0 [ 0 ]))
+              wordcount
           in
-          let rec loop ticks pos =
+          let rec loop ticks posns =
             if ticks <= 0 then ()
             else begin
+              let pos = List.hd_exn posns in
               print pos;
-              let ipos =
-                match Stdlib.Bytes.index_from_opt finaltext pos ' ' with
-                | Some i -> succ i
-                | None -> 0
+              let posns =
+                if List.length posns = 1 then indexes else List.tl_exn posns
               in
-              let npos = if ipos >= halflen then 0 else ipos in
               Externs.caml_clock_nanosleep sleep;
-              (loop [@tailcall]) (pred ticks) npos
+              (loop [@tailcall]) (pred ticks) posns
             end
           in
-          loop ticks 0
+          loop ticks indexes
     end
   | Right -> begin
       let lenminuswidth = lentext - width in
       let halflen = lentext asr 1 in
       let minpos = lenminuswidth - halflen in
-      print_endline (Bytes.to_string finaltext);
-      print_endline (string_of_int lenminuswidth);
       match mode with
       | Char ->
           let ticks = succ (halflen * cycles) in
@@ -250,7 +262,8 @@ let run text
           let indexes =
             List.take
               (List.rev
-                 (getspaces width finaltext (pred lentext) [ lenminuswidth ]))
+                 (getwordboundariesright width finaltext (pred lentext)
+                    [ lenminuswidth ]))
               wordcount
           in
           let rec loop ticks posns =
