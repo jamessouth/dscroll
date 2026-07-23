@@ -178,25 +178,76 @@ let run text
   begin match direction with
   | Direction.Bounce -> begin
       let lenminuswidth = lentext - width in
-      let ticks = succ ((lenminuswidth * cycles) lsl 1) in
-      let rec loop ticks pos dir =
-        if ticks <= 0 then ()
-        else begin
-          print pos;
-          let ipos = pos + dir in
-          let npos =
-            if ipos <= 0 then 0
-            else if ipos >= lenminuswidth then lenminuswidth
-            else ipos
+      match mode with
+      | Char -> begin
+          let ticks = succ ((lenminuswidth * cycles) lsl 1) in
+          let rec loop ticks pos dir =
+            if ticks <= 0 then ()
+            else begin
+              print pos;
+              let ipos = pos + dir in
+              let npos =
+                if ipos <= 0 then 0
+                else if ipos >= lenminuswidth then lenminuswidth
+                else ipos
+              in
+              let ndir =
+                if ipos <= 0 then 1
+                else if ipos >= lenminuswidth then -1
+                else dir
+              in
+              Externs.caml_clock_nanosleep sleep;
+              (loop [@tailcall]) (pred ticks) npos ndir
+            end
           in
-          let ndir =
-            if ipos <= 0 then 1 else if ipos >= lenminuswidth then -1 else dir
-          in
-          Externs.caml_clock_nanosleep sleep;
-          (loop [@tailcall]) (pred ticks) npos ndir
+          loop ticks 0 1
         end
-      in
-      loop ticks 0 1
+      | Word -> begin
+          let wordcount =
+            pred (List.fold text ~init:0 ~f:(fun i _ -> succ i))
+          in
+          print_endline (Bytes.to_string finaltext);
+          print_endline (string_of_int lenminuswidth);
+          let rightinds =
+            List.take
+              (List.rev
+                 (getwordboundariesright width finaltext (pred lentext)
+                    [ lenminuswidth ]))
+              wordcount
+          in
+          let leftinds =
+            List.take
+              (List.rev
+                 (getwordboundariesleft
+                    (pred (Bytes.length finaltext))
+                    finaltext 1 [ 0 ]))
+              wordcount
+          in
+
+          let indexes =
+            List.remove_consecutive_duplicates
+              (List.filter (List.append leftinds rightinds) ~f:(fun x ->
+                   x <= lenminuswidth))
+              ~equal:(fun a b -> a = b)
+          in
+          List.iter indexes ~f:(fun x -> Printf.printf "%d " x);
+          print_endline "";
+          let ticks = succ (List.length indexes * cycles) in
+
+          let rec loop ticks posns =
+            if ticks <= 0 then ()
+            else begin
+              let pos = List.hd_exn posns in
+              print pos;
+              let posns =
+                if List.length posns = 1 then indexes else List.tl_exn posns
+              in
+              Externs.caml_clock_nanosleep sleep;
+              (loop [@tailcall]) (pred ticks) posns
+            end
+          in
+          loop ticks indexes
+        end
     end
   | Left -> begin
       let halflen = lentext asr 1 in
@@ -224,6 +275,9 @@ let run text
               (List.rev (getwordboundariesleft halflen finaltext 0 [ 0 ]))
               wordcount
           in
+          List.iter indexes ~f:(fun x -> Printf.printf "%d " x);
+          print_endline "";
+
           let rec loop ticks posns =
             if ticks <= 0 then ()
             else begin
@@ -266,6 +320,9 @@ let run text
                     [ lenminuswidth ]))
               wordcount
           in
+
+          List.iter indexes ~f:(fun x -> Printf.printf "%d " x);
+          print_endline "";
           let rec loop ticks posns =
             if ticks <= 0 then ()
             else begin
