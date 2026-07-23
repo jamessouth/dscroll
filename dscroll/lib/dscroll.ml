@@ -180,7 +180,7 @@ let run text
       let lenminuswidth = lentext - width in
       match mode with
       | Char -> begin
-          let ticks = succ ((lenminuswidth * cycles) lsl 1) in
+          let ticks = succ ((Int.max 1 lenminuswidth * cycles) lsl 1) in
           let rec loop ticks pos dir =
             if ticks <= 0 then ()
             else begin
@@ -203,37 +203,43 @@ let run text
           loop ticks 0 1
         end
       | Word -> begin
-          let wordcount =
-            pred (List.fold text ~init:0 ~f:(fun i _ -> succ i))
-          in
-          print_endline (Bytes.to_string finaltext);
-          print_endline (string_of_int lenminuswidth);
-          let rightinds =
-            List.take
-              (List.rev
-                 (getwordboundariesright width finaltext (pred lentext)
-                    [ lenminuswidth ]))
-              wordcount
-          in
-          let leftinds =
-            List.take
-              (List.rev
-                 (getwordboundariesleft
-                    (pred (Bytes.length finaltext))
-                    finaltext 1 [ 0 ]))
-              wordcount
-          in
+          let text_len = gettextlen (-1) text in
 
           let indexes =
-            List.remove_consecutive_duplicates
-              (List.filter (List.append leftinds rightinds) ~f:(fun x ->
-                   x <= lenminuswidth))
-              ~equal:(fun a b -> a = b)
+            if text_len > width then (
+              let wordcount =
+                Int.max 1 (pred (List.fold text ~init:0 ~f:(fun i _ -> succ i)))
+              in
+              print_endline (Bytes.to_string finaltext);
+              print_endline (string_of_int lenminuswidth);
+              print_endline (string_of_int wordcount);
+              let rightinds =
+                List.take
+                  (List.rev
+                     (getwordboundariesright width finaltext (pred lentext)
+                        [ lenminuswidth ]))
+                  wordcount
+              in
+              let leftinds =
+                List.take
+                  (List.rev
+                     (getwordboundariesleft
+                        (pred (Bytes.length finaltext))
+                        finaltext 1 [ 0 ]))
+                  wordcount
+              in
+
+              List.remove_consecutive_duplicates
+                (List.filter (List.append leftinds rightinds) ~f:(fun x ->
+                     x <= lenminuswidth))
+                ~equal:(fun a b -> a = b))
+            else if text_len = width then [ 0 ]
+            else [ 0; lenminuswidth ]
           in
           List.iter indexes ~f:(fun x -> Printf.printf "%d " x);
           print_endline "";
-          let ticks = succ (List.length indexes * cycles) in
 
+          let ticks = succ (List.length indexes * cycles) in
           let rec loop ticks posns =
             if ticks <= 0 then ()
             else begin
